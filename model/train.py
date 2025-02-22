@@ -1,0 +1,276 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath('..'))
+
+from data.data_store import create_dataset
+from feature.feature import create_batch_feature
+from model.model import PredictionModel
+
+import pandas as pd
+import numpy as np
+import random
+from collections import Counter
+import itertools
+
+import torch
+import torch.nn as nn
+
+from imblearn.over_sampling import RandomOverSampler
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from torch.utils.data import DataLoader, Dataset
+
+# # 下载AAPL一年的股票数据
+# df = yf.download('AAPL', start='2023-01-01', end='2024-01-01', interval='1d')
+
+# # 计算百分比变化
+# df_pct_change = df[['Open', 'High', 'Low', 'Close']].pct_change().dropna()
+
+# # 增加交易量等特征（可以选择是否包含交易量特征）
+# df_pct_change['Volume'] = df['Volume'].iloc[1:].values
+
+# # 归一化数据
+# scaler = MinMaxScaler(feature_range=(0, 1))
+# scaled_data = scaler.fit_transform(df_pct_change.values)
+
+
+def set_seed(seed=42):
+    # Python random module
+    random.seed(seed)
+
+    # NumPy
+    np.random.seed(seed)
+
+    # PyTorch
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you use multiple GPUs
+
+    # Ensure deterministic behavior
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+class StockDataset(Dataset):
+
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
+
+
+class CustomLoss(nn.Module):
+
+    def __init__(self):
+        super(CustomLoss, self).__init__()
+        # class_weights = torch.tensor([5.0, 5.0, 1.0])
+        self.criterion = nn.BCEWithLogitsLoss()
+
+    def forward(self, logits, targets):
+        loss = self.criterion(logits, targets)
+        return loss
+
+
+def multi_label_random_oversample(X, y, random_state=42):
+    """
+    Apply RandomOverSampler for multi-label data by considering each unique label combination as a separate class.
+
+    Args:
+        X (numpy.ndarray): Feature matrix (n_samples, seq_len, n_features)
+        y (numpy.ndarray): Multi-label binary matrix (n_samples, n_labels)
+        random_state (int): Random state for reproducibility
+
+    Returns:
+        X_resampled, y_resampled: Resampled feature matrix and label matrix
+    """
+    # Reshape X from 3D to 2D
+    n_samples, seq_len, n_features = X.shape
+    X_reshaped = X.reshape(n_samples, seq_len * n_features)
+
+    # Convert multi-label matrix to label combinations
+    y_combinations = [tuple(label) for label in y]
+
+    # Count the occurrences of each combination
+    combination_counts = Counter(y_combinations)
+
+    # RandomOverSampler requires class labels
+    y_comb_class = np.array([hash(label) for label in y_combinations])
+
+    # Apply RandomOverSampler
+    ros = RandomOverSampler(random_state=random_state)
+    X_resampled, y_resampled_comb = ros.fit_resample(X_reshaped, y_comb_class)
+
+    # Recover original multi-label format
+    hash_to_label = {hash(label): label for label in set(y_combinations)}
+    y_resampled = np.array([hash_to_label[h] for h in y_resampled_comb])
+
+    # Reshape X_resampled back to 3D
+    X_resampled = X_resampled.reshape(-1, seq_len, n_features)
+
+    return X_resampled, y_resampled
+
+
+# def normalize_features(X_train, X_test):
+#     # Normalize numerical features
+#     n_train_samples, n_timesteps, n_features = X_train.shape
+#     n_test_samples = X_test.shape[0]
+#     # Reshape to 2D: (n_samples * n_timesteps, n_features)
+#     X_train_reshaped = X_train.reshape(-1, n_features)
+#     X_test_reshaped = X_test.reshape(-1, n_features)
+
+#     # Scale using StandardScaler
+#     scaler = StandardScaler()
+#     X_train_scaled = scaler.fit_transform(X_train_reshaped)
+#     X_test_scaled = scaler.transform(X_test_reshaped) # transform uses the same parameber calculated
+
+#     # Reshape back to 3D: (n_samples, n_timesteps, n_features)
+#     X_train_scaled = X_train_scaled.reshape(n_train_samples, n_timesteps, n_features)
+#     X_test_scaled = X_test_scaled.reshape(n_test_samples, n_timesteps, n_features)
+
+#     return X_train_scaled, X_test_scaled
+
+
+def train_model(features: pd.DataFrame,
+                labels: pd.DataFrame,
+                epochs=10,
+                learning_rate=0.001) -> None:
+    # Set seed before model/training
+    random_seed = 42
+    set_seed(random_seed)
+
+    # Assume features.shape = (n_samples, seq_len, n_features)
+    # labels.shape = (n_samples, n_labels)
+    indices = np.arange(
+        features.shape[0])  # Create an array of original indices
+
+    # Split data along with indices
+    X_train, X_test, y_train, y_test, idx_train, idx_test = train_test_split(
+        features,
+        labels,
+        indices,
+        test_size=0.2,
+        random_state=random_seed,
+        stratify=None)
+
+    # We have already normalized features when creating the features, so skip normalization
+    # X_train, X_test = normalize_features(X_train, X_test)
+    # Oversampling makes testing worse, need to revisit
+    # X_train, y_train = multi_label_random_oversample(X_train, y_train, random_state=random_seed)
+
+    train_dataset = StockDataset(X_train, y_train)
+    test_dataset = StockDataset(X_test, y_test)
+
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=False)
+    test_loader = DataLoader(test_dataset,
+                             batch_size=X_test.shape[0],
+                             shuffle=False)
+
+    model = PredictionModel(input_dim=features.shape[2],
+                            seq_len=features.shape[1])
+    criterion = CustomLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Train Neural Network
+    epochs = epochs
+    for epoch in range(epochs):
+        model.train()
+        for inputs, targets in train_loader:
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        if (epoch + 1) % 10 == 0:  # print loss every 10 epochs
+            print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
+
+    return model, criterion, test_loader, idx_test
+
+
+def eval_model(model, criterion, test_loader, idx_test, dates):
+    # Model Evaluation
+    model.eval()
+    with torch.no_grad():
+        # m, n = labels.shape
+        metrics = ["TP", "FP", "FN"]
+        label_names = [
+            'trend_5days+', 'trend_5days-', 'trend_10days+', 'trend_10days-',
+            'trend_30days+', 'trend_30days-'
+        ]
+        n = len(label_names)
+
+        names_metrics = [
+            metric + name
+            for metric, name in list(itertools.product(label_names, metrics))
+        ]
+        stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
+        stats_date = {name: [] for name in names_metrics}
+        for inputs, targets in test_loader:
+            logits = model(inputs)
+            loss = criterion(logits, targets)
+            print(f"Test Loss: {loss.item():.4f}")
+            probs = torch.sigmoid(logits)  # convert logits to probabilities
+            preds = (probs > 0.5).float().numpy()  # binary predictions
+
+            for col in range(n):
+                for row in range(targets.shape[0]):
+                    index = idx_test[row]
+                    if targets[row, col] == 1 and preds[row, col] == 1:
+                        stats_count[col]["TP"] += 1
+                        stats_date[label_names[col] + "TP"].append(
+                            dates[index])
+                    elif targets[row, col] == 0 and preds[row, col] == 1:
+                        stats_count[col]["FP"] += 1
+                        stats_date[label_names[col] + "FP"].append(
+                            dates[index])
+                    elif targets[row, col] == 1 and preds[row, col] == 0:
+                        stats_count[col]["FN"] += 1
+                        stats_date[label_names[col] + "FN"].append(
+                            dates[index])
+                stats_date[label_names[col] + "TP"].sort()
+                stats_date[label_names[col] + "FP"].sort()
+                stats_date[label_names[col] + "FN"].sort()
+
+    pr = [[0.0] * n, [0.0] * n]
+    for col in range(n):
+        if stats_count[col]["TP"] + stats_count[col]["FP"] > 0:
+            pr[0][col] = stats_count[col]["TP"] / float(
+                stats_count[col]["TP"] + stats_count[col]["FP"])
+        if stats_count[col]["TP"] + stats_count[col]["FN"] > 0:
+            pr[1][col] = stats_count[col]["TP"] / float(
+                stats_count[col]["TP"] + stats_count[col]["FN"])
+    pr_table = pd.DataFrame(data=pr,
+                            index=["Precision", "Recall"],
+                            columns=label_names)
+    print(pr_table)
+
+    # Find the length of the longest sublist
+    max_rows = max([len(value) for value in stats_date.values()])
+    padded_array = np.array([
+        dates + [None] * (max_rows - len(dates))
+        for dates in stats_date.values()
+    ]).transpose()
+    dates_table = pd.DataFrame(data=padded_array, columns=names_metrics)
+    return pr_table, dates_table
+
+
+if __name__ == "__main__":
+    start_date = "2023-01-01"
+    end_date = "2024-12-31"
+    stock = "AAPL"
+    print(">>>>>>stock: ", stock)
+    df = create_dataset(stock, start_date, end_date)
+    features, labels, date_list = create_batch_feature(df)
+    model, criterion, test_loader, idx_test = train_model(features,
+                                                          labels,
+                                                          epochs=100)
+    pr_table, dates_table = eval_model(model, criterion, test_loader, idx_test,
+                                       date_list)
+    torch.save(model.state_dict(), 'model.pth')
