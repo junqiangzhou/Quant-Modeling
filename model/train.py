@@ -72,7 +72,7 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        class_weights = torch.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        class_weights = torch.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]).to(device)
         self.criterion = nn.BCEWithLogitsLoss(class_weights)
 
     def forward(self, logits, targets):
@@ -228,7 +228,10 @@ def train_model(features: pd.DataFrame,
     train_dataset = StockDataset(X_train, y_train)
     test_dataset = StockDataset(X_test, y_test)
 
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=False)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=16,
+                              shuffle=False,
+                              pin_memory=True)
     test_loader = DataLoader(test_dataset,
                              batch_size=X_test.shape[0],
                              shuffle=False)
@@ -286,7 +289,7 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
             loss = criterion(logits, targets)
             print(f"Test Loss: {loss.item():.4f}")
             probs = torch.sigmoid(logits)  # convert logits to probabilities
-            preds = (probs > 0.5).float().numpy()  # binary predictions
+            preds = (probs > 0.5).float().cpu().numpy()  # binary predictions
 
             for col in range(n):
                 for row in range(targets.shape[0]):

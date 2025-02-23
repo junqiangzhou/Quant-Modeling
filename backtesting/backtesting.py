@@ -116,7 +116,7 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    stocks = ["TSLA"]
+    stocks = ["AMD", "TSLA"]
     start_date = "2023-01-01"
     end_date = "2024-12-31"
     testing = BacktestSystem(stocks,
@@ -124,17 +124,17 @@ if __name__ == "__main__":
                              end_date,
                              latent_dim=32,
                              hidden_dim=128)
+    for stock in stocks:
+        print(f">>>>>{stock}")
+        df = testing.stocks_data_pool[stock]
+        current_date = df.index[0]
+        end_date = df.index[-1]
+        while current_date <= end_date:
+            action = testing.compute_action(stock, current_date)
+            if action == Action.Buy:
+                testing.buy(stock, current_date)
+            elif action == Action.Sell:
+                testing.sell(stock, current_date)
 
-    stock = stocks[0]
-    df = testing.stocks_data_pool[stock]
-    current_date = df.index[0]
-    end_date = df.index[-1]
-    while current_date <= end_date:
-        action = testing.compute_action(stock, current_date)
-        if action == Action.Buy:
-            testing.buy(stock, current_date)
-        elif action == Action.Sell:
-            testing.sell(stock, current_date)
-
-        current_date += timedelta(days=1)
-    print("profit: ", testing.get_profit(end_date))
+            current_date += timedelta(days=1)
+        print(f"{stock} profit: ", testing.get_profit(end_date))
