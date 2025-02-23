@@ -119,7 +119,11 @@ if __name__ == "__main__":
     stocks = ["TSLA"]
     start_date = "2023-01-01"
     end_date = "2024-12-31"
-    testing = BacktestSystem(stocks, start_date, end_date, latent_dim=32, hidden_dim=128)
+    testing = BacktestSystem(stocks,
+                             start_date,
+                             end_date,
+                             latent_dim=32,
+                             hidden_dim=128)
 
     stock = stocks[0]
     df = testing.stocks_data_pool[stock]

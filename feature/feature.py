@@ -7,10 +7,12 @@ import bisect
 
 from datetime import datetime, timedelta
 
-base_feature = ['Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50']
+base_feature = [
+    'Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50'
+]
 macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
-feature_names = [name + "_diff" for name in base_feature] + [name + "_start" for name in base_feature] + macd_feature
-
+feature_names = [name + "_diff" for name in base_feature
+                 ] + [name + "_start" for name in base_feature] + macd_feature
 
 # def normalize_features(features):
 #     # Normalize numerical features
@@ -28,6 +30,7 @@ feature_names = [name + "_diff" for name in base_feature] + [name + "_start" for
 #                                               n_features)
 
 #     return features_scaled
+
 
 def create_batch_feature(
         df: pd.DataFrame) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:

@@ -7,12 +7,16 @@ import pandas_ta as ta
 import numpy as np
 from datetime import datetime, timedelta
 
-base_feature = ['Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50']
+base_feature = [
+    'Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50'
+]
+
 
 def get_date_back(date_str: str, delta_days: int) -> str:
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     date_back = date_obj - timedelta(days=delta_days)
     return date_back.strftime("%Y-%m-%d")
+
 
 def add_prev_diff(df):
     df_columns = df[base_feature]
@@ -22,16 +26,16 @@ def add_prev_diff(df):
     df = df.join(df_prev_row_diff, how='left')
     return df
 
+
 def add_row0_diff(df, date):
     df_columns = df[base_feature]
     row = df.index.get_loc(date)
-   
+
     df_row0_diff = (df_columns - df_columns.iloc[row]) / df_columns.iloc[row]
     df_row0_diff.columns = [name + "_start" for name in df_columns.columns]
 
     df = df.join(df_row0_diff, how='left')
     return df
-    
 
 
 def visualize_dataset(df: pd.DataFrame) -> None:
@@ -89,7 +93,7 @@ def download_data(stock_symbol: str, start_date: str,
         return df
 
     # Add indicators to dataframe
-    windows=[10, 20, 50]
+    windows = [10, 20, 50]
     df = add_moving_averages(df, windows=windows)
     df = add_macd(df)
     df = add_prev_diff(df)

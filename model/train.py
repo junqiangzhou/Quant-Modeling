@@ -35,6 +35,8 @@ from torch.utils.data import DataLoader, Dataset
 # scaler = MinMaxScaler(feature_range=(0, 1))
 # scaled_data = scaler.fit_transform(df_pct_change.values)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 def set_seed(seed=42):
     # Python random module
@@ -234,7 +236,7 @@ def train_model(features: pd.DataFrame,
     model = PredictionModel(input_dim=features.shape[2],
                             seq_len=features.shape[1],
                             latent_dim=latent_dim,
-                            hidden_dim=hidden_dim)
+                            hidden_dim=hidden_dim).to(device)
     criterion = CustomLoss()
     # L2 regularization (weight decay)
     optimizer = torch.optim.Adam(model.parameters(),
@@ -246,6 +248,7 @@ def train_model(features: pd.DataFrame,
     for epoch in range(epochs):
         model.train()
         for inputs, targets in train_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
@@ -278,6 +281,7 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
         stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
         stats_date = {name: [] for name in names_metrics}
         for inputs, targets in test_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
             logits = model(inputs)
             loss = criterion(logits, targets)
             print(f"Test Loss: {loss.item():.4f}")
