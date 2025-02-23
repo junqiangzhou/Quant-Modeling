@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 
 from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import DataLoader, Dataset
@@ -69,12 +70,67 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        # class_weights = torch.tensor([5.0, 5.0, 1.0])
-        self.criterion = nn.BCEWithLogitsLoss()
+        class_weights = torch.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        self.criterion = nn.BCEWithLogitsLoss(class_weights)
 
     def forward(self, logits, targets):
         loss = self.criterion(logits, targets)
         return loss
+
+
+def multi_label_random_downsample(X, y, random_state=42):
+    """
+    Apply RandomUnderSampler for multi-label data by considering each unique label combination as a separate class.
+
+    Args:
+        X (numpy.ndarray): Feature matrix (n_samples, seq_len, n_features)
+        y (numpy.ndarray): Multi-label binary matrix (n_samples, n_labels)
+        random_state (int): Random state for reproducibility
+
+    Returns:
+        X_resampled, y_resampled: Resampled feature matrix and label matrix
+    """
+    # Reshape X from 3D to 2D
+    n_samples, seq_len, n_features = X.shape
+    X_reshaped = X.reshape(n_samples, seq_len * n_features)
+
+    # Convert multi-label matrix to label combinations
+    y_combinations = [tuple(label) for label in y]
+
+    # Count the occurrences of each combination
+    combination_counts = Counter(y_combinations)
+    zero_label = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    freq_max = max(
+        [v for k, v in combination_counts.items() if k != zero_label])
+    print(combination_counts)
+
+    # RandomUnderSampler requires class labels
+    y_comb_class = np.array([hash(label) for label in y_combinations])
+
+    sampling_strategy = {}
+    for k, v in combination_counts.items():
+        if k == zero_label:
+            sampling_strategy[hash(k)] = v  #freq_max
+        else:
+            sampling_strategy[hash(k)] = v
+
+    # Apply RandomUnderSampler
+    ros = RandomUnderSampler(sampling_strategy=sampling_strategy,
+                             random_state=random_state)
+
+    X_resampled, y_resampled_comb = ros.fit_resample(X_reshaped, y_comb_class)
+
+    # Recover original multi-label format
+    hash_to_label = {hash(label): label for label in set(y_combinations)}
+    y_resampled = np.array([hash_to_label[h] for h in y_resampled_comb])
+    y_resampled_combinations = [tuple(label) for label in y_resampled]
+    print(Counter(y_resampled_combinations))
+
+    # Reshape X_resampled back to 3D
+    X_resampled = X_resampled.reshape(-1, seq_len, n_features)
+
+    print(f"sample size before: {X.shape[0]}, after: {X_resampled.shape[0]}")
+    return X_resampled, y_resampled
 
 
 def multi_label_random_oversample(X, y, random_state=42):
@@ -138,6 +194,8 @@ def multi_label_random_oversample(X, y, random_state=42):
 
 def train_model(features: pd.DataFrame,
                 labels: pd.DataFrame,
+                latent_dim=16,
+                hidden_dim=32,
                 epochs=10,
                 learning_rate=0.001) -> None:
     # Set seed before model/training
@@ -162,6 +220,8 @@ def train_model(features: pd.DataFrame,
     # X_train, X_test = normalize_features(X_train, X_test)
     # Oversampling makes testing worse, need to revisit
     # X_train, y_train = multi_label_random_oversample(X_train, y_train, random_state=random_seed)
+    # Downsampling
+    # X_train, y_train = multi_label_random_downsample(X_train, y_train, random_state=random_seed)
 
     train_dataset = StockDataset(X_train, y_train)
     test_dataset = StockDataset(X_test, y_test)
@@ -172,9 +232,14 @@ def train_model(features: pd.DataFrame,
                              shuffle=False)
 
     model = PredictionModel(input_dim=features.shape[2],
-                            seq_len=features.shape[1])
+                            seq_len=features.shape[1],
+                            latent_dim=latent_dim,
+                            hidden_dim=hidden_dim)
     criterion = CustomLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # L2 regularization (weight decay)
+    optimizer = torch.optim.Adam(model.parameters(),
+                                 lr=learning_rate,
+                                 weight_decay=1e-5)
 
     # Train Neural Network
     epochs = epochs
@@ -264,13 +329,30 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
 if __name__ == "__main__":
     start_date = "2023-01-01"
     end_date = "2024-12-31"
-    stock = "AAPL"
-    print(">>>>>>stock: ", stock)
-    df = create_dataset(stock, start_date, end_date)
-    features, labels, date_list = create_batch_feature(df)
-    model, criterion, test_loader, idx_test = train_model(features,
-                                                          labels,
-                                                          epochs=100)
+
+    stock_lists = [
+        "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
+        "JPM", "NFLX", "WMT"
+    ]
+    for i, stock in enumerate(stock_lists):
+        print(">>>>>>stock: ", stock)
+        df = create_dataset(stock, start_date, end_date)
+        features, labels, dates = create_batch_feature(df)
+        if i == 0:
+            all_features, all_labels, all_dates = features, labels, dates
+        else:
+            all_features = np.concatenate((all_features, features), axis=0)
+            all_labels = np.concatenate((all_labels, labels), axis=0)
+            all_dates += dates
+    print("total # of data samples: ", all_features.shape[0])
+    model, criterion, test_loader, idx_test = train_model(all_features,
+                                                          all_labels,
+                                                          latent_dim=32,
+                                                          hidden_dim=128,
+                                                          epochs=100,
+                                                          learning_rate=1e-3)
+    total_params = sum(p.numel() for p in model.parameters())
+    print("total # of model params: ", total_params)
     pr_table, dates_table = eval_model(model, criterion, test_loader, idx_test,
-                                       date_list)
-    torch.save(model.state_dict(), 'model.pth')
+                                       all_dates)
+    torch.save(model.state_dict(), './model/model.pth')

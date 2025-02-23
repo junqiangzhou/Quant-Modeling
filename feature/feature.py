@@ -7,29 +7,27 @@ import bisect
 
 from datetime import datetime, timedelta
 
-feature_names = [
-    name + "_diff" for name in
-    ['Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50']
-] + ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
+base_feature = ['Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50']
+macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
+feature_names = [name + "_diff" for name in base_feature] + [name + "_start" for name in base_feature] + macd_feature
 
 
-def normalize_features(features):
-    # Normalize numerical features
-    n_train_samples, n_timesteps, n_features = features.shape
+# def normalize_features(features):
+#     # Normalize numerical features
+#     n_train_samples, n_timesteps, n_features = features.shape
 
-    # Reshape to 2D: (n_samples * n_timesteps, n_features)
-    features_reshaped = features.reshape(-1, n_features)
+#     # Reshape to 2D: (n_samples * n_timesteps, n_features)
+#     features_reshaped = features.reshape(-1, n_features)
 
-    # Scale using StandardScaler
-    scaler = StandardScaler()
-    features_scaled = scaler.fit_transform(features_reshaped)
+#     # Scale using StandardScaler
+#     scaler = StandardScaler()
+#     features_scaled = scaler.fit_transform(features_reshaped)
 
-    # Reshape back to 3D: (n_samples, n_timesteps, n_features)
-    features_scaled = features_scaled.reshape(n_train_samples, n_timesteps,
-                                              n_features)
+#     # Reshape back to 3D: (n_samples, n_timesteps, n_features)
+#     features_scaled = features_scaled.reshape(n_train_samples, n_timesteps,
+#                                               n_features)
 
-    return features_scaled
-
+#     return features_scaled
 
 def create_batch_feature(
         df: pd.DataFrame) -> Tuple[NDArray[np.float64], NDArray[np.float64]]:
@@ -55,7 +53,6 @@ def create_batch_feature(
             ]
         ]
         label_list.append(label)
-
         date_list.append(df.index[i])
 
     features = np.stack(batch_list, axis=0)

@@ -7,11 +7,31 @@ import pandas_ta as ta
 import numpy as np
 from datetime import datetime, timedelta
 
+base_feature = ['Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50']
 
 def get_date_back(date_str: str, delta_days: int) -> str:
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     date_back = date_obj - timedelta(days=delta_days)
     return date_back.strftime("%Y-%m-%d")
+
+def add_prev_diff(df):
+    df_columns = df[base_feature]
+    df_prev_row_diff = df_columns.pct_change()
+    df_prev_row_diff.columns = [name + "_diff" for name in df_columns.columns]
+
+    df = df.join(df_prev_row_diff, how='left')
+    return df
+
+def add_row0_diff(df, date):
+    df_columns = df[base_feature]
+    row = df.index.get_loc(date)
+   
+    df_row0_diff = (df_columns - df_columns.iloc[row]) / df_columns.iloc[row]
+    df_row0_diff.columns = [name + "_start" for name in df_columns.columns]
+
+    df = df.join(df_row0_diff, how='left')
+    return df
+    
 
 
 def visualize_dataset(df: pd.DataFrame) -> None:
@@ -68,19 +88,12 @@ def download_data(stock_symbol: str, start_date: str,
         df = df.join(macd)
         return df
 
-    #
-    def add_perc_diff(df):
-        df_perc = df[[
-            'Open', 'High', 'Low', 'Close', "Volume", "MA_10", "MA_20", "MA_50"
-        ]].pct_change()
-        df_perc.columns = [name + "_diff" for name in df_perc.columns]
-        df = df.join(df_perc, how='left')
-        return df
-
     # Add indicators to dataframe
-    df = add_moving_averages(df)
+    windows=[10, 20, 50]
+    df = add_moving_averages(df, windows=windows)
     df = add_macd(df)
-    df = add_perc_diff(df)
+    df = add_prev_diff(df)
+    df = add_row0_diff(df, df.index[windows[-1] + 1])
 
     # Function to add earnings information
     def create_earnings_data(ticker, start_date, end_date):
@@ -184,6 +197,7 @@ def create_dataset(stock_symbol: str,
     labels = create_labels(df)
     data = df.join(labels, how='right')
     data.index = data.index.date
+    data["stock"] = stock_symbol
     return data
 
 

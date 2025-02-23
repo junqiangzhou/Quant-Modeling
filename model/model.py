@@ -99,14 +99,13 @@ class MultiTaskModel(nn.Module):
         super(MultiTaskModel, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-
-        # Three output heads, each with 3 classes
+        # self.dropout = nn.Dropout(p=0.3)  # 30% Dropout
         self.out = nn.Linear(hidden_dim, 6)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
+        # x = self.dropout(x)
         # x = F.relu(self.fc2(x))
-
         logits = self.out(x)  # Raw logits for BCEWithLogitsLoss
 
         # Return raw logits (use CrossEntropyLoss directly)
@@ -115,13 +114,13 @@ class MultiTaskModel(nn.Module):
 
 class PredictionModel(nn.Module):
 
-    def __init__(self, input_dim, seq_len=30):
+    def __init__(self, input_dim, seq_len, latent_dim=32, hidden_dim=64):
         super(PredictionModel, self).__init__()
-        latent_dim = 8
         self.encoder_model = EncoderModel(input_dim=input_dim,
                                           seq_len=seq_len,
                                           latent_dim=latent_dim)
-        self.output_model = MultiTaskModel(input_dim=latent_dim, hidden_dim=8)
+        self.output_model = MultiTaskModel(input_dim=latent_dim,
+                                           hidden_dim=hidden_dim)
 
     def forward(self, x):
         embedding = self.encoder_model(x)

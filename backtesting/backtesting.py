@@ -1,4 +1,4 @@
-from data.data_store import download_data
+from data.data_store import download_data, add_row0_diff
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 
@@ -25,6 +25,8 @@ class BacktestSystem:
                  stock_lists: List[str],
                  start_date: str,
                  end_date: str,
+                 latent_dim=32,
+                 hidden_dim=128,
                  init_fund: float = 1.0e4):
         self.stocks_data_pool = {}
         for stock in stock_lists:
@@ -36,7 +38,10 @@ class BacktestSystem:
 
         # Load the saved parameters
         # Set to evaluation mode
-        self.model = PredictionModel(input_dim=11, seq_len=30)
+        self.model = PredictionModel(input_dim=19,
+                                     seq_len=30,
+                                     latent_dim=latent_dim,
+                                     hidden_dim=hidden_dim)
         self.model.load_state_dict(torch.load('./model/model.pth'))
         self.model.eval()
 
@@ -68,10 +73,10 @@ class BacktestSystem:
         probs_down = sum(probs[0, 1:probs.shape[1] + 1:2]) / 3.0
 
         if probs_down > 0.5:  # need to sell
-            print(f"Predicted to sell, {date}")
+            print(f"------Predicted to sell, {date}")
             return Action.Sell
         elif probs_up > 0.5:  # good to buy
-            print(f"Predicted to buy, {date}")
+            print(f"++++++Predicted to buy, {date}")
             return Action.Buy
         else:
             return Action.Hold
@@ -111,10 +116,10 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    stocks = ["AAPL"]
+    stocks = ["TSLA"]
     start_date = "2023-01-01"
     end_date = "2024-12-31"
-    testing = BacktestSystem(stocks, start_date, end_date)
+    testing = BacktestSystem(stocks, start_date, end_date, latent_dim=32, hidden_dim=128)
 
     stock = stocks[0]
     df = testing.stocks_data_pool[stock]
