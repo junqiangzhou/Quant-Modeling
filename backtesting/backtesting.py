@@ -1,4 +1,4 @@
-from data.data_fetcher import download_data, add_row0_diff
+from data.data_fetcher import download_data
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import compute_online_feature
 from model.model import PredictionModel

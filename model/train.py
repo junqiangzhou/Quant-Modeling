@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath('..'))
 
-from data.data_fetcher import create_dataset
+from data.data_fetcher import create_dataset_with_labels
 from feature.feature import create_batch_feature
 from model.model import PredictionModel
 
@@ -343,7 +343,7 @@ if __name__ == "__main__":
     ]
     for i, stock in enumerate(stock_lists):
         print(">>>>>>stock: ", stock)
-        df = create_dataset(stock, start_date, end_date)
+        df = create_dataset_with_labels(stock, start_date, end_date)
         features, labels, dates = create_batch_feature(df)
         if i == 0:
             all_features, all_labels, all_dates = features, labels, dates

@@ -2,6 +2,7 @@ import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 
+
 def visualize_dataset(df: pd.DataFrame) -> None:
     # Plot candlestick chart with indicators
     apds = [
