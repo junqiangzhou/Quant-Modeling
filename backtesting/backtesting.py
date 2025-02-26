@@ -163,8 +163,8 @@ if __name__ == "__main__":
             start_price, end_price = df.loc[current_date]["Close"], df.loc[
                 end_date]["Close"]
             print(
-                f"price change percent: {(end_price - start_price) / start_price * 100: .2f} %"
-            )
+                f"Price change: {(end_price - start_price) / start_price * 100: .2f} %",
+                end="   ")
         except:
             continue
         while current_date <= end_date:

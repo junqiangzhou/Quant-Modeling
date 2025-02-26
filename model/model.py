@@ -101,12 +101,12 @@ class MultiTaskModel(nn.Module):
         self.ln1 = nn.LayerNorm(
             hidden_dim)  # Normalizes across feature dimensions
         # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        # self.dropout = nn.Dropout(p=0.3)  # 30% Dropout
+        self.dropout = nn.Dropout(p=0.1)  # 1% Dropout
         self.out = nn.Linear(hidden_dim, 6)
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
-        # x = self.dropout(x)
+        x = self.dropout(x)
         # x = F.relu(self.fc2(x))
         logits = self.out(x)  # Raw logits for BCEWithLogitsLoss
 

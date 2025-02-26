@@ -6,7 +6,7 @@ import random
 
 from datetime import datetime, timedelta
 from data.visualize import visualize_dataset
-from data.indicator import add_macd, add_moving_averages
+from data.indicator import add_macd, add_moving_averages, add_kdj
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 
@@ -88,6 +88,7 @@ def download_data(stock_symbol: str,
     try:
         df = add_moving_averages(df, windows=windows)
         df = add_macd(df)
+        df = add_kdj(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")
@@ -131,11 +132,13 @@ if __name__ == "__main__":
 
     all_stocks = fetch_stocks()
     # Choose N stocks for training
-    stock_training = random.sample(all_stocks, 10)
     # stock_lists = [
     #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
     #     "JPM", "NFLX", "WMT"
     # ]
+    stock_training = random.sample(all_stocks, 10)
+    # Generate training data
+    print("Generate training data...")
     for i, stock in enumerate(stock_training):
         print(">>>>>>stock: ", stock)
         try:
@@ -150,5 +153,6 @@ if __name__ == "__main__":
             all_df = df
         else:
             all_df = pd.concat([all_df, df], ignore_index=False)
-    print("total # of data samples: ", all_df.shape[0])
-    all_df.to_csv(f"./data/stock_{start_date}_{end_date}.csv", index=True)
+    print("total # of training data points: ", all_df.shape[0])
+    all_df.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
+                  index=True)

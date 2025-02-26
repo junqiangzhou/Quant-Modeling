@@ -202,9 +202,6 @@ def split_train_test_data(
         labels: pd.DataFrame,
         batch_size=32
 ) -> Tuple[DataLoader, DataLoader, np.ndarray, np.ndarray]:
-    # Set seed before model/training
-    set_seed(random_seed)
-
     # Assume features.shape = (n_samples, seq_len, n_features)
     # labels.shape = (n_samples, n_labels)
     indices = np.arange(
@@ -244,6 +241,8 @@ def train_model(train_loader: DataLoader,
                 hidden_dim=32,
                 epochs=10,
                 learning_rate=0.001) -> Tuple[PredictionModel, CustomLoss]:
+    # Set seed before model/training
+    set_seed(random_seed)
     model = PredictionModel(input_dim=features.shape[2],
                             seq_len=features.shape[1],
                             latent_dim=latent_dim,
@@ -350,7 +349,7 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
 
 
 if __name__ == "__main__":
-    csv_file = "data/stock_2023-01-01_2024-12-31.csv"
+    csv_file = "data/stock_training_2023-01-01_2024-12-31.csv"
     if not os.path.exists(csv_file):
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")
@@ -382,7 +381,7 @@ if __name__ == "__main__":
     model, criterion = train_model(train_loader,
                                    latent_dim=32,
                                    hidden_dim=16,
-                                   epochs=100,
+                                   epochs=200,
                                    learning_rate=1e-3)
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
