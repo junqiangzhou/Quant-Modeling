@@ -1,4 +1,4 @@
-from data.data_store import download_data, add_row0_diff
+from data.data_fetcher import download_data, add_row0_diff
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
@@ -125,9 +125,10 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    stocks = fetch_stocks()
-    start_date = "2023-01-01"
-    end_date = "2023-12-31"
+    # stocks = fetch_stocks()
+    stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
+    start_date = "2024-12-01"
+    end_date = "2025-02-24"
     testing = BacktestSystem(stocks,
                              start_date,
                              end_date,

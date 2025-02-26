@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath('..'))
 
-from data.data_store import create_dataset
+from data.data_fetcher import create_dataset
 from feature.feature import create_batch_feature
 from model.model import PredictionModel
 
