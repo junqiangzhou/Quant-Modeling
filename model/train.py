@@ -1,4 +1,4 @@
-seed=42import sys
+import sys
 import os
 
 sys.path.append(os.path.abspath('..'))
@@ -8,7 +8,7 @@ from feature.feature import create_batch_feature
 from data.stocks_fetcher import fetch_stocks
 
 from model.model import PredictionModel
-
+from typing import Tuple
 import pandas as pd
 import numpy as np
 import random
@@ -39,6 +39,7 @@ from torch.utils.data import DataLoader, Dataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 random_seed = 42
+
 
 def set_seed(seed=random_seed):
     # Python random module
@@ -196,12 +197,11 @@ def multi_label_random_oversample(X, y, random_state=random_seed):
 #     return X_train_scaled, X_test_scaled
 
 
-def train_model(features: pd.DataFrame,
-                labels: pd.DataFrame,
-                latent_dim=16,
-                hidden_dim=32,
-                epochs=10,
-                learning_rate=0.001) -> None:
+def split_train_test_data(
+        features: pd.DataFrame,
+        labels: pd.DataFrame,
+        batch_size=32
+) -> Tuple[DataLoader, DataLoader, np.ndarray, np.ndarray]:
     # Set seed before model/training
     set_seed(random_seed)
 
@@ -230,13 +230,20 @@ def train_model(features: pd.DataFrame,
     test_dataset = StockDataset(X_test, y_test)
 
     train_loader = DataLoader(train_dataset,
-                              batch_size=16,
+                              batch_size=batch_size,
                               shuffle=True,
                               pin_memory=True)
     test_loader = DataLoader(test_dataset,
                              batch_size=X_test.shape[0],
                              shuffle=True)
+    return train_loader, test_loader, idx_train, idx_test
 
+
+def train_model(train_loader: DataLoader,
+                latent_dim=16,
+                hidden_dim=32,
+                epochs=10,
+                learning_rate=0.001) -> Tuple[PredictionModel, CustomLoss]:
     model = PredictionModel(input_dim=features.shape[2],
                             seq_len=features.shape[1],
                             latent_dim=latent_dim,
@@ -258,12 +265,15 @@ def train_model(features: pd.DataFrame,
 
             optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(),
+                                           max_norm=1.0)  # gradient clipping
+
             optimizer.step()
 
         if (epoch + 1) % 10 == 0:  # print loss every 10 epochs
             print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
-    return model, criterion, test_loader, idx_test
+    return model, criterion
 
 
 def eval_model(model, criterion, test_loader, idx_test, dates):
@@ -286,7 +296,12 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
         stats_date = {name: [] for name in names_metrics}
         for inputs, targets in test_loader:
             inputs, targets = inputs.to(device), targets.to(device)
+            if np.isnan(inputs.cpu().numpy()).any() or np.isnan(
+                    targets.cpu().numpy()).any():
+                print("NaN detected in inputs")
             logits = model(inputs)
+            if np.isnan(logits.cpu().numpy()).any():
+                print("NaN detected in logits")
             loss = criterion(logits, targets)
             print(f"Test Loss: {loss.item():.4f}")
             probs = torch.sigmoid(logits)  # convert logits to probabilities
@@ -335,38 +350,40 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
 
 
 if __name__ == "__main__":
-    start_date = "2023-01-01"
-    end_date = "2024-12-31"
-    viz = True
-    random.seed(random_seed)
+    csv_file = "data/stock_2023-01-01_2024-12-31.csv"
+    if not os.path.exists(csv_file):
+        raise FileNotFoundError(
+            f"Please run data_fetcher.py to download the data first.")
+    else:
+        df_all = pd.read_csv(csv_file)
 
-    all_stocks = fetch_stocks()
-    # Choose N stocks for training
-    stock_training = random.sample(all_stocks, 20)
-    # stock_lists = [
-    #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
-    #     "JPM", "NFLX", "WMT"
-    # ]
-    for i, stock in enumerate(stock_training):
+    stocks = df_all['stock'].unique()
+    for i, stock in enumerate(stocks):
         print(">>>>>>stock: ", stock)
-        df = create_dataset_with_labels(stock, start_date, end_date, vis=True)
-        features, labels, dates = create_batch_feature(df)
+        try:
+            df = df_all[df_all['stock'] == stock]
+            features, labels, dates = create_batch_feature(df)
+            if np.isnan(features).any() or np.isnan(labels).any():
+                print(f"NaN detected in {stock}")
+                continue
+        except:
+            print(f"Error in processing {stock}")
+            continue
         if i == 0:
             all_features, all_labels, all_dates = features, labels, dates
-            all_df = df
         else:
             all_features = np.concatenate((all_features, features), axis=0)
             all_labels = np.concatenate((all_labels, labels), axis=0)
             all_dates += dates
-            all_df = pd.concat([all_df, df], ignore_index=False)
     print("total # of data samples: ", all_features.shape[0])
-    all_df.to_csv(f"./data/stock_{start_date}_{end_date}.csv", index=True)
-    model, criterion, test_loader, idx_test = train_model(all_features,
-                                                          all_labels,
-                                                          latent_dim=32,
-                                                          hidden_dim=16,
-                                                          epochs=500,
-                                                          learning_rate=1e-3)
+
+    train_loader, test_loader, idx_train, idx_test = split_train_test_data(
+        all_features, all_labels, batch_size=128)
+    model, criterion = train_model(train_loader,
+                                   latent_dim=32,
+                                   hidden_dim=16,
+                                   epochs=100,
+                                   learning_rate=1e-3)
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
     pr_table, dates_table = eval_model(model, criterion, test_loader, idx_test,

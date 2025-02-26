@@ -9,9 +9,11 @@ from datetime import datetime, timedelta
 import torch
 import pandas as pd
 import numpy as np
-import bisect
 from enum import Enum
 import collections
+import random
+
+random_seed_test = 20
 
 
 class Action(Enum):
@@ -53,10 +55,12 @@ class BacktestSystem:
         self.fund = init_fund
         self.action = Action.Hold
         self.stocks_hold = collections.defaultdict(int)
+        self.cost_base = collections.defaultdict(float)
 
     def reset(self):
         self.fund = self.init_fund
         self.stocks_hold = collections.defaultdict(int)
+        self.cost_base = collections.defaultdict(float)
         self.action = Action.Hold
 
     def compute_action(self, stock: str, date: datetime) -> Action:
@@ -65,6 +69,13 @@ class BacktestSystem:
                 stock].loc[date]["Earnings_Date"]:
             # print(f"Earnings day must sell, {date}")
             return Action.Sell
+
+        # Must sell to cut-loss
+        if date in self.stocks_data_pool[stock].index:
+            cost_base = self.cost_base[stock]
+            price = self.stocks_data_pool[stock].loc[date]["Close"]
+            if price < cost_base * 0.92:
+                return Action.Sell
 
         features = compute_online_feature(self.stocks_data_pool[stock], date)
         if features is not None:
@@ -98,6 +109,7 @@ class BacktestSystem:
         if self.fund > 100:
             shares = int(self.fund / price)
             self.stocks_hold[stock] += shares
+            self.cost_base[stock] = price
             self.fund -= shares * price
         return
 
@@ -111,6 +123,7 @@ class BacktestSystem:
 
             self.fund += shares * price
             self.stocks_hold[stock] = 0
+            self.cost_base[stock] = 0
 
         return
 
@@ -125,17 +138,23 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    # stocks = fetch_stocks()
-    stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
-    start_date = "2024-12-01"
-    end_date = "2025-02-24"
-    testing = BacktestSystem(stocks,
+    random.seed(random_seed_test)  # use different seed from data_fetcher
+    stocks = fetch_stocks()
+    stocks_testing = random.sample(stocks, 20)
+    # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
+    start_date = "2022-01-01"
+    end_date = "2022-12-31"
+    testing = BacktestSystem(stocks_testing,
                              start_date,
                              end_date,
                              latent_dim=32,
                              hidden_dim=16)
-    for stock in stocks:
+    for stock in stocks_testing:
         testing.reset()
+
+        if stock not in testing.stocks_data_pool:
+            print(f"{stock} data not available")
+            continue
 
         df = testing.stocks_data_pool[stock]
         current_date, end_date = testing.start_date, testing.end_date

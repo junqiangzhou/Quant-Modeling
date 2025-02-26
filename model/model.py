@@ -98,12 +98,14 @@ class MultiTaskModel(nn.Module):
     def __init__(self, input_dim, hidden_dim=64):
         super(MultiTaskModel, self).__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.ln1 = nn.LayerNorm(
+            hidden_dim)  # Normalizes across feature dimensions
         # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         # self.dropout = nn.Dropout(p=0.3)  # 30% Dropout
         self.out = nn.Linear(hidden_dim, 6)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
+        x = F.relu(self.ln1(self.fc1(x)))
         # x = self.dropout(x)
         # x = F.relu(self.fc2(x))
         logits = self.out(x)  # Raw logits for BCEWithLogitsLoss

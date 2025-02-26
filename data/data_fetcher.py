@@ -2,16 +2,20 @@ import pandas as pd
 from yfinance import Ticker
 from yahoo_fin import stock_info as si
 import numpy as np
+import random
 
 from datetime import datetime, timedelta
 from data.visualize import visualize_dataset
 from data.indicator import add_macd, add_moving_averages
 from data.label import compute_labels
+from data.stocks_fetcher import fetch_stocks
 
 # List of basic data downloaded from Yahoo Finance
 base_feature = [
     'Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50'
 ]
+
+random_seed = 42
 
 
 # Add columns that calculates the delta w.r.t. previous row for each base feature
@@ -78,10 +82,15 @@ def download_data(stock_symbol: str,
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
     df = ticker.history(start=shifted_start_date, end=end_date, interval="1d")
+    print(f"stock {stock_symbol} shape: {df.shape}")
 
     # Add technical indicator
-    df = add_moving_averages(df, windows=windows)
-    df = add_macd(df)
+    try:
+        df = add_moving_averages(df, windows=windows)
+        df = add_macd(df)
+    except Exception:
+        raise ValueError(
+            f"Technical indicators not available for {stock_symbol}")
 
     # Trim data within the interested time window
     df = df.loc[start_date:end_date]
@@ -115,21 +124,31 @@ def create_dataset_with_labels(stock_symbol: str,
 
 
 if __name__ == "__main__":
-    stock = "AAPL"
-    start_date, end_date = "2023-01-01", "2024-01-01"
-    data = create_dataset_with_labels(stock, start_date, end_date)
-    data.to_csv(f"./data/{stock}_{start_date}_{end_date}.csv", index=True)
+    start_date = "2023-01-01"
+    end_date = "2024-12-31"
+    viz = False
+    random.seed(random_seed)
 
-    # print(data.shape[0])
-    # print(data['MA_10'].count())
-    # print(data['MA_20'].count())
-    # print(data['MA_50'].count())
-    # print(data['MACD_12_26_9'].count())
-    # print(data['MACDh_12_26_9'].count())
-    # print(data['MACDs_12_26_9'].count())
-    # print(data["EPS_Estimate"].count())
-    # print(data["Earnings_Date"].sum())
-    #
-    # print(f"5 days Up: {(data['trend_5days'] == 1).sum()}, 5 days Down: {(data['trend_5days'] == -1).sum()}")
-    # print(f"10 days Up: {(data['trend_10days'] == 1).sum()}, 10 days Down: {(data['trend_10days'] == -1).sum()}")
-    # print(f"30 days Up: {(data['trend_30days'] == 1).sum()}, 30 days Down: {(data['trend_30days'] == -1).sum()}")
+    all_stocks = fetch_stocks()
+    # Choose N stocks for training
+    stock_training = random.sample(all_stocks, 10)
+    # stock_lists = [
+    #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
+    #     "JPM", "NFLX", "WMT"
+    # ]
+    for i, stock in enumerate(stock_training):
+        print(">>>>>>stock: ", stock)
+        try:
+            df = create_dataset_with_labels(stock,
+                                            start_date,
+                                            end_date,
+                                            vis=viz)
+        except:
+            print(f"Error in processing {stock}")
+            continue
+        if i == 0:
+            all_df = df
+        else:
+            all_df = pd.concat([all_df, df], ignore_index=False)
+    print("total # of data samples: ", all_df.shape[0])
+    all_df.to_csv(f"./data/stock_{start_date}_{end_date}.csv", index=True)
