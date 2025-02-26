@@ -35,7 +35,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 "Close"].iloc[i]
 
             # Skip 1st and last row as it's close to earnings date
-            if i == 0 or i == len(df_window) - 1:
+            if i == 0 or i > len(df_window) - 6:
                 labels.loc[curr_index] = [
                     np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
                 ]

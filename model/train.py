@@ -1,10 +1,12 @@
-import sys
+seed=42import sys
 import os
 
 sys.path.append(os.path.abspath('..'))
 
 from data.data_fetcher import create_dataset_with_labels
 from feature.feature import create_batch_feature
+from data.stocks_fetcher import fetch_stocks
+
 from model.model import PredictionModel
 
 import pandas as pd
@@ -36,9 +38,9 @@ from torch.utils.data import DataLoader, Dataset
 # scaled_data = scaler.fit_transform(df_pct_change.values)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+random_seed = 42
 
-
-def set_seed(seed=42):
+def set_seed(seed=random_seed):
     # Python random module
     random.seed(seed)
 
@@ -80,7 +82,7 @@ class CustomLoss(nn.Module):
         return loss
 
 
-def multi_label_random_downsample(X, y, random_state=42):
+def multi_label_random_downsample(X, y, random_state=random_seed):
     """
     Apply RandomUnderSampler for multi-label data by considering each unique label combination as a separate class.
 
@@ -135,7 +137,7 @@ def multi_label_random_downsample(X, y, random_state=42):
     return X_resampled, y_resampled
 
 
-def multi_label_random_oversample(X, y, random_state=42):
+def multi_label_random_oversample(X, y, random_state=random_seed):
     """
     Apply RandomOverSampler for multi-label data by considering each unique label combination as a separate class.
 
@@ -201,7 +203,6 @@ def train_model(features: pd.DataFrame,
                 epochs=10,
                 learning_rate=0.001) -> None:
     # Set seed before model/training
-    random_seed = 42
     set_seed(random_seed)
 
     # Assume features.shape = (n_samples, seq_len, n_features)
@@ -336,22 +337,30 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
 if __name__ == "__main__":
     start_date = "2023-01-01"
     end_date = "2024-12-31"
+    viz = True
+    random.seed(random_seed)
 
-    stock_lists = [
-        "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
-        "JPM", "NFLX", "WMT"
-    ]
-    for i, stock in enumerate(stock_lists):
+    all_stocks = fetch_stocks()
+    # Choose N stocks for training
+    stock_training = random.sample(all_stocks, 20)
+    # stock_lists = [
+    #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
+    #     "JPM", "NFLX", "WMT"
+    # ]
+    for i, stock in enumerate(stock_training):
         print(">>>>>>stock: ", stock)
-        df = create_dataset_with_labels(stock, start_date, end_date)
+        df = create_dataset_with_labels(stock, start_date, end_date, vis=True)
         features, labels, dates = create_batch_feature(df)
         if i == 0:
             all_features, all_labels, all_dates = features, labels, dates
+            all_df = df
         else:
             all_features = np.concatenate((all_features, features), axis=0)
             all_labels = np.concatenate((all_labels, labels), axis=0)
             all_dates += dates
+            all_df = pd.concat([all_df, df], ignore_index=False)
     print("total # of data samples: ", all_features.shape[0])
+    all_df.to_csv(f"./data/stock_{start_date}_{end_date}.csv", index=True)
     model, criterion, test_loader, idx_test = train_model(all_features,
                                                           all_labels,
                                                           latent_dim=32,

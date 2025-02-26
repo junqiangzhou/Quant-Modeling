@@ -90,8 +90,6 @@ def download_data(stock_symbol: str,
     df = add_detla_from_date(df, df.index[0])
 
     df = add_earnings_data(df, ticker, start_date, end_date)
-    # Reformat the index to be just days
-    df.index = df.index.date
     # Add a column for stock symbol
     df["stock"] = stock_symbol
     return df
@@ -101,14 +99,18 @@ def create_dataset_with_labels(stock_symbol: str,
                                start_date: str,
                                end_date: str,
                                vis: bool = False) -> pd.DataFrame:
+    # Download raw data with technical indicators
     df = download_data(stock_symbol, start_date, end_date)
-    if vis:
-        visualize_dataset(df)
 
     # create labels and add them into the dataframe
     labels = compute_labels(df)
     df = df.join(labels, how='right')
     df = df.iloc[1:]  # drop 1st row
+
+    if vis:
+        visualize_dataset(df)
+    # Reformat the index to be just days
+    df.index = df.index.date
     return df
 
 
