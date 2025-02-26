@@ -102,6 +102,7 @@ def download_data(stock_symbol: str, start_date: str,
     # Function to add earnings information
     def create_earnings_data(ticker, start_date, end_date):
         earnings = ticker.earnings_dates
+        earnings = earnings.sort_index()
         earnings = earnings.loc[start_date:end_date]
         # earnings = earnings[['EPS Estimate', 'Reported EPS']]
         # earnings.index = earnings.index.date

@@ -1,4 +1,5 @@
 from data.data_store import download_data, add_row0_diff
+from data.stocks_fetcher import fetch_stocks
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 
@@ -26,13 +27,16 @@ class BacktestSystem:
                  start_date: str,
                  end_date: str,
                  latent_dim=32,
-                 hidden_dim=128,
+                 hidden_dim=32,
                  init_fund: float = 1.0e4):
         self.stocks_data_pool = {}
         for stock in stock_lists:
-            df = download_data(stock, start_date, end_date)
-            df.index = df.index.date
-            self.stocks_data_pool[stock] = df
+            try:
+                df = download_data(stock, start_date, end_date)
+                df.index = df.index.date
+                self.stocks_data_pool[stock] = df
+            except ValueError:
+                print(f"{stock} data not available")
         self.start_date = df.index[0]
         self.end_date = df.index[-1]
 
@@ -50,11 +54,16 @@ class BacktestSystem:
         self.action = Action.Hold
         self.stocks_hold = collections.defaultdict(int)
 
+    def reset(self):
+        self.fund = self.init_fund
+        self.stocks_hold = collections.defaultdict(int)
+        self.action = Action.Hold
+
     def compute_action(self, stock: str, date: datetime) -> Action:
         # Must sell all shares before earnings day
         if date in self.stocks_data_pool[stock].index and self.stocks_data_pool[
                 stock].loc[date]["Earnings_Date"]:
-            print(f"Earnings day must sell, {date}")
+            # print(f"Earnings day must sell, {date}")
             return Action.Sell
 
         features = compute_online_feature(self.stocks_data_pool[stock], date)
@@ -73,10 +82,10 @@ class BacktestSystem:
         probs_down = sum(probs[0, 1:probs.shape[1] + 1:2]) / 3.0
 
         if probs_down > 0.5:  # need to sell
-            print(f"------Predicted to sell, {date}")
+            # print(f"------Predicted to sell, {date}")
             return Action.Sell
         elif probs_up > 0.5:  # good to buy
-            print(f"++++++Predicted to buy, {date}")
+            # print(f"++++++Predicted to buy, {date}")
             return Action.Buy
         else:
             return Action.Hold
@@ -116,19 +125,28 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    stocks = ["AMD", "TSLA"]
+    stocks = fetch_stocks()
     start_date = "2023-01-01"
-    end_date = "2024-12-31"
+    end_date = "2023-12-31"
     testing = BacktestSystem(stocks,
                              start_date,
                              end_date,
                              latent_dim=32,
-                             hidden_dim=128)
+                             hidden_dim=16)
     for stock in stocks:
-        print(f">>>>>{stock}")
+        testing.reset()
+
         df = testing.stocks_data_pool[stock]
-        current_date = df.index[0]
-        end_date = df.index[-1]
+        current_date, end_date = testing.start_date, testing.end_date
+        print(f">>>>>{stock}")
+        try:
+            start_price, end_price = df.loc[current_date]["Close"], df.loc[
+                end_date]["Close"]
+            print(
+                f"price change percent: {(end_price - start_price) / start_price * 100: .2f} %"
+            )
+        except:
+            continue
         while current_date <= end_date:
             action = testing.compute_action(stock, current_date)
             if action == Action.Buy:
@@ -137,4 +155,6 @@ if __name__ == "__main__":
                 testing.sell(stock, current_date)
 
             current_date += timedelta(days=1)
-        print(f"{stock} profit: ", testing.get_profit(end_date))
+        print(
+            f"Quant profit: {testing.get_profit(end_date) / testing.init_fund * 100: .2f} %"
+        )

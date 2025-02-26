@@ -230,11 +230,11 @@ def train_model(features: pd.DataFrame,
 
     train_loader = DataLoader(train_dataset,
                               batch_size=16,
-                              shuffle=False,
+                              shuffle=True,
                               pin_memory=True)
     test_loader = DataLoader(test_dataset,
                              batch_size=X_test.shape[0],
-                             shuffle=False)
+                             shuffle=True)
 
     model = PredictionModel(input_dim=features.shape[2],
                             seq_len=features.shape[1],
@@ -244,7 +244,7 @@ def train_model(features: pd.DataFrame,
     # L2 regularization (weight decay)
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=learning_rate,
-                                 weight_decay=1e-5)
+                                 weight_decay=1e-4)
 
     # Train Neural Network
     epochs = epochs
@@ -355,8 +355,8 @@ if __name__ == "__main__":
     model, criterion, test_loader, idx_test = train_model(all_features,
                                                           all_labels,
                                                           latent_dim=32,
-                                                          hidden_dim=128,
-                                                          epochs=100,
+                                                          hidden_dim=16,
+                                                          epochs=500,
                                                           learning_rate=1e-3)
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
