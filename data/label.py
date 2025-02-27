@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 
 # List of labels where the model is trained against and predicts at inference time
 label_feature = [
-    "trend_5days+", "trend_5days-", "trend_10days+", "trend_10days-",
+    "trend_10days+", "trend_10days-", "trend_20days+", "trend_20days-",
     "trend_30days+", "trend_30days-"
 ]
-time_windows = [5, 10, 30]  # number of next rows to consider
+time_windows = [10, 20, 30]  # number of next rows to consider
 
 
 # Computes the labels, and here's the basic idea:

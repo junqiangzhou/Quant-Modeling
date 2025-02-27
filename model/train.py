@@ -77,7 +77,7 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        class_weights = torch.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]).to(device)
+        class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 5.0, 5.0]).to(device)
         self.criterion = nn.BCEWithLogitsLoss(class_weights)
 
     def forward(self, logits, targets):
@@ -376,7 +376,7 @@ if __name__ == "__main__":
         else:
             all_features = np.concatenate((all_features, features), axis=0)
             all_labels = np.concatenate((all_labels, labels), axis=0)
-            all_dates += dates
+            all_dates = np.concatenate((all_dates, dates))
     print("total # of data samples: ", all_features.shape[0])
 
     train_loader, test_dataset, idx_test = split_train_test_data(

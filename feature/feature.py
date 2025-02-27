@@ -37,12 +37,12 @@ feature_names = [name + "_diff" for name in base_feature
 
 def create_batch_feature(
     df: pd.DataFrame
-) -> Tuple[NDArray[np.float64], NDArray[np.float64], List[datetime]]:
+) -> Tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     batch_list = []
     label_list = []
     date_list = []
     for i in range(look_back_window, len(df)):
-        if pd.isna(df.iloc[i]["trend_5days+"]
+        if pd.isna(df.iloc[i][label_feature[0]]
                    ):  # Skip earnings day where we don't compute labels
             continue
 
@@ -58,7 +58,8 @@ def create_batch_feature(
     features = np.stack(batch_list, axis=0)
     # features_scaled = normalize_features(features)
     labels = np.stack(label_list, axis=0)
-    return features, labels, date_list
+    dates = np.array(date_list)
+    return features, labels, dates
 
 
 def compute_online_feature(df: pd.DataFrame,
