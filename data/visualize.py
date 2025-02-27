@@ -23,19 +23,22 @@ def visualize_dataset(df: pd.DataFrame,
         df_labels[label] = df[label] * scale
         df_labels[label] = df[label].replace(0, np.nan)
 
-    apds = [
-        mpf.make_addplot(df[['MA_10', 'MA_20', 'MA_50']]),
-        mpf.make_addplot(df_labels[viz_labels[0]],
-                         scatter=True,
-                         marker="^",
-                         color="green",
-                         markersize=100),
-        mpf.make_addplot(df_labels[viz_labels[1]],
-                         scatter=True,
-                         marker=">",
-                         color="red",
-                         markersize=100)
-    ]
+    apds = [mpf.make_addplot(df[['MA_10', 'MA_20', 'MA_50']])]
+
+    if df_labels[viz_labels[0]].count() > 0:
+        apds.append(
+            mpf.make_addplot(df_labels[viz_labels[0]],
+                             scatter=True,
+                             marker="^",
+                             color="green",
+                             markersize=100))
+    if df_labels[viz_labels[1]].count() > 0:
+        apds.append(
+            mpf.make_addplot(df_labels[viz_labels[1]],
+                             scatter=True,
+                             marker=">",
+                             color="red",
+                             markersize=100))
     stock = df["stock"].iloc[0]
 
     mpf.plot(df,
@@ -67,13 +70,15 @@ def visualize_dataset(df: pd.DataFrame,
 
 
 if __name__ == "__main__":
-    csv_file = "data/stock_training_2023-01-01_2024-12-31.csv"
+    csv_file = "data/stock_testing_2023-01-01_2024-12-31.csv"
     if not os.path.exists(csv_file):
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")
     else:
         df_all = pd.read_csv(csv_file)
-    print(df_all.index[0])
-    df_all.index = pd.to_datetime(df_all.index)
-    visualize_dataset(df_all, stock="GOOGL")
+        df_all['Date'] = pd.to_datetime(df_all['Date'])
+        df_all.set_index('Date', inplace=True)
+    visualize_dataset(df_all,
+                      stock="PYPL",
+                      viz_labels=["trend_30days+_pred", "trend_30days-_pred"])
     plt.show()

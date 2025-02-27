@@ -278,7 +278,7 @@ def check_nan_in_tensor(tensor):
         raise ValueError("NaN detected in tensor")
 
 
-def eval_model(model, criterion, test_dataset, idx_test, dates):
+def eval_model(model, criterion, test_dataset, test_dates):
     # Model Evaluation
     model.eval()
     with torch.no_grad():
@@ -311,16 +311,15 @@ def eval_model(model, criterion, test_dataset, idx_test, dates):
 
         for col in range(n):
             for row in range(targets.shape[0]):
-                index = idx_test[row]
                 if targets[row, col] == 1 and preds[row, col] == 1:
                     stats_count[col]["TP"] += 1
-                    stats_date[label_names[col] + "TP"].append(dates[index])
+                    stats_date[label_names[col] + "TP"].append(test_dates[row])
                 elif targets[row, col] == 0 and preds[row, col] == 1:
                     stats_count[col]["FP"] += 1
-                    stats_date[label_names[col] + "FP"].append(dates[index])
+                    stats_date[label_names[col] + "FP"].append(test_dates[row])
                 elif targets[row, col] == 1 and preds[row, col] == 0:
                     stats_count[col]["FN"] += 1
-                    stats_date[label_names[col] + "FN"].append(dates[index])
+                    stats_date[label_names[col] + "FN"].append(test_dates[row])
             stats_date[label_names[col] + "TP"].sort()
             stats_date[label_names[col] + "FP"].sort()
             stats_date[label_names[col] + "FN"].sort()
@@ -356,6 +355,9 @@ if __name__ == "__main__":
             f"Please run data_fetcher.py to download the data first.")
     else:
         df_all = pd.read_csv(csv_file)
+        df_all['Date'] = pd.to_datetime(df_all['Date'])
+        df_all.set_index('Date', inplace=True)
+        df_all.index = df_all.index.date
 
     stocks = df_all['stock'].unique()
     for i, stock in enumerate(stocks):
@@ -387,14 +389,17 @@ if __name__ == "__main__":
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
     predicted_labels, pr_table, dates_table = eval_model(
-        model, criterion, test_dataset, idx_test, all_dates)
+        model, criterion, test_dataset, all_dates[idx_test])
+
     # add the predicted labels to the original dataframe
     for j, label in enumerate(label_names):
         col_name = label + "_pred"
         df_all[col_name] = np.nan
         for i, idx in enumerate(idx_test):
-            df_all.loc[idx, col_name] = predicted_labels[i, j]
+            date = all_dates[idx]
+            df_all.loc[date, col_name] = predicted_labels[i, j]
     df_all.to_csv(f"./data/stock_testing_2023-01-01_2024-12-31.csv",
-                  index=True)
+                  index=True,
+                  index_label="Date")
 
     torch.save(model.state_dict(), './model/model.pth')

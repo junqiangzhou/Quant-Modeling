@@ -157,4 +157,5 @@ if __name__ == "__main__":
             all_df = pd.concat([all_df, df], ignore_index=False)
     print("total # of training data points: ", all_df.shape[0])
     all_df.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
-                  index=True)
+                  index=True,
+                  index_label="Date")
