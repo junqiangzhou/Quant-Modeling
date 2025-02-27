@@ -5,7 +5,6 @@ import numpy as np
 import random
 
 from datetime import datetime, timedelta
-from data.visualize import visualize_dataset
 from data.indicator import add_macd, add_moving_averages, add_kdj
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
@@ -16,6 +15,11 @@ base_feature = [
 ]
 
 random_seed = 42
+
+
+def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:
+    df = df_all[df_all['stock'] == stock]
+    return df
 
 
 # Add columns that calculates the delta w.r.t. previous row for each base feature
@@ -117,8 +121,6 @@ def create_dataset_with_labels(stock_symbol: str,
     df = df.join(labels, how='right')
     df = df.iloc[1:]  # drop 1st row
 
-    if vis:
-        visualize_dataset(df)
     # Reformat the index to be just days
     df.index = df.index.date
     return df
@@ -136,7 +138,7 @@ if __name__ == "__main__":
     #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
     #     "JPM", "NFLX", "WMT"
     # ]
-    stock_training = random.sample(all_stocks, 10)
+    stock_training = random.sample(all_stocks, 30)
     # Generate training data
     print("Generate training data...")
     for i, stock in enumerate(stock_training):

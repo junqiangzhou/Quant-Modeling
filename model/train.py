@@ -3,7 +3,7 @@ import os
 
 sys.path.append(os.path.abspath('..'))
 
-from data.data_fetcher import create_dataset_with_labels
+from data.data_fetcher import create_dataset_with_labels, get_stock_df
 from feature.feature import create_batch_feature
 from data.stocks_fetcher import fetch_stocks
 
@@ -23,6 +23,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import DataLoader, Dataset
+from data import label
 
 # # 下载AAPL一年的股票数据
 # df = yf.download('AAPL', start='2023-01-01', end='2024-01-01', interval='1d')
@@ -39,6 +40,7 @@ from torch.utils.data import DataLoader, Dataset
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 random_seed = 42
+label_names = label.label_feature
 
 
 def set_seed(seed=random_seed):
@@ -200,8 +202,7 @@ def multi_label_random_oversample(X, y, random_state=random_seed):
 def split_train_test_data(
         features: pd.DataFrame,
         labels: pd.DataFrame,
-        batch_size=32
-) -> Tuple[DataLoader, DataLoader, np.ndarray, np.ndarray]:
+        batch_size=32) -> Tuple[DataLoader, StockDataset, np.ndarray]:
     # Assume features.shape = (n_samples, seq_len, n_features)
     # labels.shape = (n_samples, n_labels)
     indices = np.arange(
@@ -230,10 +231,7 @@ def split_train_test_data(
                               batch_size=batch_size,
                               shuffle=True,
                               pin_memory=True)
-    test_loader = DataLoader(test_dataset,
-                             batch_size=X_test.shape[0],
-                             shuffle=True)
-    return train_loader, test_loader, idx_train, idx_test
+    return train_loader, test_dataset, idx_test
 
 
 def train_model(train_loader: DataLoader,
@@ -275,16 +273,17 @@ def train_model(train_loader: DataLoader,
     return model, criterion
 
 
-def eval_model(model, criterion, test_loader, idx_test, dates):
+def check_nan_in_tensor(tensor):
+    if np.isnan(tensor.cpu().numpy()).any():
+        raise ValueError("NaN detected in tensor")
+
+
+def eval_model(model, criterion, test_dataset, idx_test, dates):
     # Model Evaluation
     model.eval()
     with torch.no_grad():
         # m, n = labels.shape
         metrics = ["TP", "FP", "FN"]
-        label_names = [
-            'trend_5days+', 'trend_5days-', 'trend_10days+', 'trend_10days-',
-            'trend_30days+', 'trend_30days-'
-        ]
         n = len(label_names)
 
         names_metrics = [
@@ -293,38 +292,40 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
         ]
         stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
         stats_date = {name: [] for name in names_metrics}
-        for inputs, targets in test_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            if np.isnan(inputs.cpu().numpy()).any() or np.isnan(
-                    targets.cpu().numpy()).any():
-                print("NaN detected in inputs")
-            logits = model(inputs)
-            if np.isnan(logits.cpu().numpy()).any():
-                print("NaN detected in logits")
-            loss = criterion(logits, targets)
-            print(f"Test Loss: {loss.item():.4f}")
-            probs = torch.sigmoid(logits)  # convert logits to probabilities
-            preds = (probs > 0.5).float().cpu().numpy()  # binary predictions
 
-            for col in range(n):
-                for row in range(targets.shape[0]):
-                    index = idx_test[row]
-                    if targets[row, col] == 1 and preds[row, col] == 1:
-                        stats_count[col]["TP"] += 1
-                        stats_date[label_names[col] + "TP"].append(
-                            dates[index])
-                    elif targets[row, col] == 0 and preds[row, col] == 1:
-                        stats_count[col]["FP"] += 1
-                        stats_date[label_names[col] + "FP"].append(
-                            dates[index])
-                    elif targets[row, col] == 1 and preds[row, col] == 0:
-                        stats_count[col]["FN"] += 1
-                        stats_date[label_names[col] + "FN"].append(
-                            dates[index])
-                stats_date[label_names[col] + "TP"].sort()
-                stats_date[label_names[col] + "FP"].sort()
-                stats_date[label_names[col] + "FN"].sort()
+        inputs = torch.from_numpy(test_dataset.X).to(device)
+        targets = torch.from_numpy(test_dataset.y).to(device)
+        # Check input data
+        check_nan_in_tensor(inputs)
+        check_nan_in_tensor(targets)
 
+        # Check model prediction
+        logits = model(inputs)
+        check_nan_in_tensor(logits)
+
+        loss = criterion(logits, targets)
+        print(f"Test Loss: {loss.item():.4f}")
+
+        probs = torch.sigmoid(logits)  # convert logits to probabilities
+        preds = (probs > 0.5).float().cpu().numpy()  # binary predictions
+
+        for col in range(n):
+            for row in range(targets.shape[0]):
+                index = idx_test[row]
+                if targets[row, col] == 1 and preds[row, col] == 1:
+                    stats_count[col]["TP"] += 1
+                    stats_date[label_names[col] + "TP"].append(dates[index])
+                elif targets[row, col] == 0 and preds[row, col] == 1:
+                    stats_count[col]["FP"] += 1
+                    stats_date[label_names[col] + "FP"].append(dates[index])
+                elif targets[row, col] == 1 and preds[row, col] == 0:
+                    stats_count[col]["FN"] += 1
+                    stats_date[label_names[col] + "FN"].append(dates[index])
+            stats_date[label_names[col] + "TP"].sort()
+            stats_date[label_names[col] + "FP"].sort()
+            stats_date[label_names[col] + "FN"].sort()
+
+    # calculate precision and recall metrics
     pr = [[0.0] * n, [0.0] * n]
     for col in range(n):
         if stats_count[col]["TP"] + stats_count[col]["FP"] > 0:
@@ -345,7 +346,7 @@ def eval_model(model, criterion, test_loader, idx_test, dates):
         for dates in stats_date.values()
     ]).transpose()
     dates_table = pd.DataFrame(data=padded_array, columns=names_metrics)
-    return pr_table, dates_table
+    return preds, pr_table, dates_table
 
 
 if __name__ == "__main__":
@@ -360,7 +361,7 @@ if __name__ == "__main__":
     for i, stock in enumerate(stocks):
         print(">>>>>>stock: ", stock)
         try:
-            df = df_all[df_all['stock'] == stock]
+            df = get_stock_df(df_all, stock)
             features, labels, dates = create_batch_feature(df)
             if np.isnan(features).any() or np.isnan(labels).any():
                 print(f"NaN detected in {stock}")
@@ -376,7 +377,7 @@ if __name__ == "__main__":
             all_dates += dates
     print("total # of data samples: ", all_features.shape[0])
 
-    train_loader, test_loader, idx_train, idx_test = split_train_test_data(
+    train_loader, test_dataset, idx_test = split_train_test_data(
         all_features, all_labels, batch_size=128)
     model, criterion = train_model(train_loader,
                                    latent_dim=32,
@@ -385,6 +386,15 @@ if __name__ == "__main__":
                                    learning_rate=1e-3)
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
-    pr_table, dates_table = eval_model(model, criterion, test_loader, idx_test,
-                                       all_dates)
+    predicted_labels, pr_table, dates_table = eval_model(
+        model, criterion, test_dataset, idx_test, all_dates)
+    # add the predicted labels to the original dataframe
+    for j, label in enumerate(label_names):
+        col_name = label + "_pred"
+        df_all[col_name] = np.nan
+        for i, idx in enumerate(idx_test):
+            df_all.loc[idx, col_name] = predicted_labels[i, j]
+    df_all.to_csv(f"./data/stock_testing_2023-01-01_2024-12-31.csv",
+                  index=True)
+
     torch.save(model.state_dict(), './model/model.pth')

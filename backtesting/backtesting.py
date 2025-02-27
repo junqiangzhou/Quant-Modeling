@@ -142,8 +142,8 @@ if __name__ == "__main__":
     stocks = fetch_stocks()
     stocks_testing = random.sample(stocks, 20)
     # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
-    start_date = "2022-01-01"
-    end_date = "2022-12-31"
+    start_date = "2021-01-01"
+    end_date = "2021-12-31"
     testing = BacktestSystem(stocks_testing,
                              start_date,
                              end_date,

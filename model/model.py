@@ -101,7 +101,7 @@ class MultiTaskModel(nn.Module):
         self.ln1 = nn.LayerNorm(
             hidden_dim)  # Normalizes across feature dimensions
         # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.dropout = nn.Dropout(p=0.1)  # 1% Dropout
+        self.dropout = nn.Dropout(p=0.01)  # 1% Dropout
         self.out = nn.Linear(hidden_dim, 6)
 
     def forward(self, x):
