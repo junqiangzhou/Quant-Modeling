@@ -3,6 +3,7 @@ from data.stocks_fetcher import fetch_stocks
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
+from config.config import ENCODER_TYPE
 
 from typing import List
 from numpy.typing import NDArray
@@ -44,7 +45,8 @@ class BacktestSystem:
         # Load the saved parameters
         # Set to evaluation mode
         self.model = PredictionModel(feature_len=len(feature_names),
-                                     seq_len=look_back_window)
+                                     seq_len=look_back_window,
+                                     encoder_type=ENCODER_TYPE)
         self.model.load_state_dict(torch.load('./model/model.pth'))
         self.model.eval()
 
@@ -139,8 +141,8 @@ if __name__ == "__main__":
     stocks = fetch_stocks()
     stocks_testing = random.sample(stocks, 20)
     # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
-    start_date = "2021-01-01"
-    end_date = "2021-12-31"
+    start_date = "2022-01-01"
+    end_date = "2022-12-31"
     testing = BacktestSystem(stocks_testing, start_date, end_date)
     for stock in stocks_testing:
         testing.reset()

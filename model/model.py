@@ -13,6 +13,7 @@ LATENT_QUERY_DIM = 2
 class EncoderType(Enum):
     MLP = 0
     Transformer = 1
+    LatentQueryTransformer = 2
 
 
 class MLPEncoder(nn.Module):
@@ -67,7 +68,52 @@ class PositionalEncoding(nn.Module):
         return x
 
 
-# Encoder Model
+class TransformerEncoder(nn.Module):
+
+    def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
+        super(TransformerEncoder, self).__init__()
+
+        # Positional Encoding
+        self.pos_encoder = PositionalEncoding(feature_len, seq_len)
+
+        # Input projection
+        self.input_proj = nn.Linear(feature_len, LATENT_DIM)
+
+        # Transformer Encoder
+        encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
+                                                    nhead=nhead)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
+                                                         num_layers=num_layers)
+
+        # Output layer
+        self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
+
+    def forward(self, x):
+        x = x.float()
+        # x shape: (batch_size, seq_len, input_dim)
+        batch_size = x.shape[0]
+
+        # Add positional encoding
+        x = self.pos_encoder(x)
+
+        # Project input
+        x = self.input_proj(x)  # (batch_size, seq_len, latent_dim)
+
+        # Transformer expects shape (seq_len, batch_size, latent_dim)
+        x = x.transpose(0, 1)
+
+        # Pass through transformer encoder
+        memory = self.transformer_encoder(
+            x)  # (seq_len, batch_size, latent_dim)
+
+        # Output projection - Aggregate over sequence dimension
+        output = self.output_proj(
+            memory.mean(dim=0))  # (batch_size, latent_dim)
+
+        return output
+
+
+# Transformer Encoder Model with latent query
 class LatentQueryTransformerEncoder(nn.Module):
 
     def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
@@ -80,7 +126,6 @@ class LatentQueryTransformerEncoder(nn.Module):
         self.input_proj = nn.Linear(feature_len, LATENT_DIM)
 
         # Latent query (learnable)
-        LATENT_QUERY_DIM = 2
         self.latent_queries = nn.Parameter(
             torch.randn(1, LATENT_QUERY_DIM, LATENT_DIM))
 
@@ -164,8 +209,11 @@ class PredictionModel(nn.Module):
             self.encoder_model = MLPEncoder(feature_len=feature_len,
                                             seq_len=seq_len)
         elif encoder_type == EncoderType.Transformer:
-            self.encoder_model = LatentQueryTransformerEncoder(feature_len=feature_len,
+            self.encoder_model = TransformerEncoder(feature_len=feature_len,
                                                     seq_len=seq_len)
+        elif encoder_type == EncoderType.LatentQueryTransformer:
+            self.encoder_model = LatentQueryTransformerEncoder(
+                feature_len=feature_len, seq_len=seq_len)
         else:
             raise ValueError("Invalid encoder type")
 

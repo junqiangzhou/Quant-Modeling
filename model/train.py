@@ -24,6 +24,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from torch.utils.data import DataLoader, Dataset
 from data import label
+from config.config import ENCODER_TYPE
 
 # # 下载AAPL一年的股票数据
 # df = yf.download('AAPL', start='2023-01-01', end='2024-01-01', interval='1d')
@@ -240,7 +241,8 @@ def train_model(train_loader: DataLoader,
     # Set seed before model/training
     set_seed(random_seed)
     model = PredictionModel(feature_len=features.shape[2],
-                            seq_len=features.shape[1]).to(device)
+                            seq_len=features.shape[1],
+                            encoder_type=ENCODER_TYPE).to(device)
     criterion = CustomLoss()
     # L2 regularization (weight decay)
     optimizer = torch.optim.Adam(model.parameters(),
