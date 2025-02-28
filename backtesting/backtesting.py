@@ -1,5 +1,6 @@
 from data.data_fetcher import download_data
 from data.stocks_fetcher import fetch_stocks
+from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 
@@ -28,8 +29,6 @@ class BacktestSystem:
                  stock_lists: List[str],
                  start_date: str,
                  end_date: str,
-                 latent_dim=32,
-                 hidden_dim=32,
                  init_fund: float = 1.0e4):
         self.stocks_data_pool = {}
         for stock in stock_lists:
@@ -44,10 +43,8 @@ class BacktestSystem:
 
         # Load the saved parameters
         # Set to evaluation mode
-        self.model = PredictionModel(input_dim=19,
-                                     seq_len=30,
-                                     latent_dim=latent_dim,
-                                     hidden_dim=hidden_dim)
+        self.model = PredictionModel(feature_len=len(feature_names),
+                                     seq_len=look_back_window)
         self.model.load_state_dict(torch.load('./model/model.pth'))
         self.model.eval()
 
@@ -144,11 +141,7 @@ if __name__ == "__main__":
     # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
     start_date = "2021-01-01"
     end_date = "2021-12-31"
-    testing = BacktestSystem(stocks_testing,
-                             start_date,
-                             end_date,
-                             latent_dim=32,
-                             hidden_dim=16)
+    testing = BacktestSystem(stocks_testing, start_date, end_date)
     for stock in stocks_testing:
         testing.reset()
 

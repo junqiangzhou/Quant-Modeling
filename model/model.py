@@ -1,108 +1,147 @@
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
+from enum import Enum
+
+MLP_ENCODER_HIDDEN_DIM = 128
+MULTI_TASK_DECODER_HIDDEN_DIM = 32
+LATENT_DIM = 32
+LATENT_QUERY_DIM = 2
+
+
+class EncoderType(Enum):
+    MLP = 0
+    Transformer = 1
+
+
+class MLPEncoder(nn.Module):
+
+    def __init__(self, feature_len, seq_len):
+        super(MLPEncoder, self).__init__()
+        # Flatten the input (batch_size, seq_len, feature_len) -> (batch_size, seq_len * feature_len)
+        input_dim = feature_len * seq_len
+
+        # Define MLP layers
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, MLP_ENCODER_HIDDEN_DIM),
+            nn.LayerNorm(MLP_ENCODER_HIDDEN_DIM),  # Layer Normalization
+            nn.ReLU(),
+            nn.Dropout(0.01),  # Dropout with 10% probability
+            nn.Linear(MLP_ENCODER_HIDDEN_DIM, LATENT_DIM))
+
+    def forward(self, x):
+        x = x.float()
+        batch_size = x.shape[0]
+        # Flatten input
+        x = x.reshape(batch_size, -1)
+
+        # Pass through MLP
+        latent_output = self.encoder(x)
+
+        return latent_output
 
 
 # Positional Encoding class
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, max_len=5000):
+    def __init__(self, feature_len: int, seq_len: int):
         super(PositionalEncoding, self).__init__()
 
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        pe = torch.zeros(seq_len, feature_len)
+        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
-            torch.arange(0, d_model, 2).float() *
-            (-torch.log(torch.tensor(10000.0)) / d_model))
+            torch.arange(0, feature_len, 2).float() *
+            (-math.log(10000.0) / feature_len))
         pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        if feature_len % 2 == 0:
+            pe[:, 1::2] = torch.cos(position * div_term)
+        else:
+            pe[:, 1::2] = torch.cos(position * div_term[:-1])
         pe = pe.unsqueeze(0)
 
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + self.pe[:, :x.size(1), :]
+        x = x + self.pe
         return x
 
 
 # Encoder Model
-class EncoderModel(nn.Module):
+class LatentQueryTransformerEncoder(nn.Module):
 
-    def __init__(self,
-                 input_dim=9,
-                 seq_len=30,
-                 latent_dim=32,
-                 nhead=4,
-                 num_layers=2):
-        super(EncoderModel, self).__init__()
-
-        self.seq_len = seq_len
-        self.input_dim = input_dim
-        self.latent_dim = latent_dim
-
-        # Input projection
-        self.input_proj = nn.Linear(input_dim, latent_dim)
+    def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
+        super(LatentQueryTransformerEncoder, self).__init__()
 
         # Positional Encoding
-        self.pos_encoder = PositionalEncoding(latent_dim, max_len=seq_len)
+        self.pos_encoder = PositionalEncoding(feature_len, seq_len)
+
+        # Input projection
+        self.input_proj = nn.Linear(feature_len, LATENT_DIM)
 
         # Latent query (learnable)
-        self.latent_query = nn.Parameter(torch.randn(1, 1, latent_dim))
+        LATENT_QUERY_DIM = 2
+        self.latent_queries = nn.Parameter(
+            torch.randn(1, LATENT_QUERY_DIM, LATENT_DIM))
 
         # Transformer Encoder
-        encoder_layers = nn.TransformerEncoderLayer(d_model=latent_dim,
+        encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
                                                     nhead=nhead)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
                                                          num_layers=num_layers)
 
         # Output layer
-        self.output_proj = nn.Linear(latent_dim, latent_dim)
+        self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
 
-    def forward(self, src):
-        src = src.float()
-        # src shape: (batch_size, seq_len, input_dim)
-        batch_size = src.shape[0]
-
-        # Project input
-        src = self.input_proj(src)  # (batch_size, seq_len, latent_dim)
+    def forward(self, x):
+        x = x.float()
+        # x shape: (batch_size, seq_len, input_dim)
+        batch_size = x.shape[0]
 
         # Add positional encoding
-        src = self.pos_encoder(src)
+        x = self.pos_encoder(x)
+
+        # Project input
+        x = self.input_proj(x)  # (batch_size, seq_len, latent_dim)
 
         # Prepare latent query
-        latent_query = self.latent_query.repeat(
-            batch_size, 1, 1)  # (batch_size, 1, latent_dim)
+        latent_queries = self.latent_queries.expand(
+            batch_size, -1, -1)  # (batch_size, num_queries, latent_dim)
 
         # Concatenate latent query at the beginning
-        src = torch.cat([latent_query, src],
-                        dim=1)  # (batch_size, seq_len+1, latent_dim)
+        x = torch.cat([latent_queries, x],
+                      dim=1)  # (batch_size, num_queries+seq_len, latent_dim)
 
-        # Transformer expects shape (seq_len+1, batch_size, latent_dim)
-        src = src.transpose(0, 1)
+        # Transformer expects shape (num_queries+seq_len, batch_size, latent_dim)
+        x = x.transpose(0, 1)
 
         # Pass through transformer encoder
         memory = self.transformer_encoder(
-            src)  # (seq_len+1, batch_size, latent_dim)
+            x)  # (num_queries+seq_len, batch_size, latent_dim)
 
-        # Extract latent query output (first token)
-        latent_output = memory[0]  # (batch_size, latent_dim)
+        # Extract only the latent query outputs
+        query_output = memory[:
+                              LATENT_QUERY_DIM]  # (num_queries, batch_size, latent_dim)
+        # Reshape back to (batch_size, num_queries, latent_dim)
+        query_output = query_output.transpose(0, 1)
 
-        # Output projection
-        output = self.output_proj(latent_output)  # (batch_size, latent_dim)
+        # Output projection - Aggregate over sequence dimension
+        output = self.output_proj(
+            query_output.mean(dim=1))  # (batch_size, latent_dim)
 
         return output
 
 
-class MultiTaskModel(nn.Module):
+class MultiTaskClassifier(nn.Module):
 
-    def __init__(self, input_dim, hidden_dim=64):
-        super(MultiTaskModel, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.ln1 = nn.LayerNorm(
-            hidden_dim)  # Normalizes across feature dimensions
+    def __init__(self):
+        super(MultiTaskClassifier, self).__init__()
+        self.fc1 = nn.Linear(LATENT_DIM, MULTI_TASK_DECODER_HIDDEN_DIM)
+        self.ln1 = nn.LayerNorm(MULTI_TASK_DECODER_HIDDEN_DIM
+                                )  # Normalizes across feature dimensions
         # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.dropout = nn.Dropout(p=0.01)  # 1% Dropout
-        self.out = nn.Linear(hidden_dim, 6)
+        self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM, 6)
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
@@ -116,13 +155,21 @@ class MultiTaskModel(nn.Module):
 
 class PredictionModel(nn.Module):
 
-    def __init__(self, input_dim, seq_len, latent_dim=32, hidden_dim=64):
+    def __init__(self,
+                 feature_len,
+                 seq_len,
+                 encoder_type=EncoderType.Transformer):
         super(PredictionModel, self).__init__()
-        self.encoder_model = EncoderModel(input_dim=input_dim,
-                                          seq_len=seq_len,
-                                          latent_dim=latent_dim)
-        self.output_model = MultiTaskModel(input_dim=latent_dim,
-                                           hidden_dim=hidden_dim)
+        if encoder_type == EncoderType.MLP:
+            self.encoder_model = MLPEncoder(feature_len=feature_len,
+                                            seq_len=seq_len)
+        elif encoder_type == EncoderType.Transformer:
+            self.encoder_model = LatentQueryTransformerEncoder(feature_len=feature_len,
+                                                    seq_len=seq_len)
+        else:
+            raise ValueError("Invalid encoder type")
+
+        self.output_model = MultiTaskClassifier()
 
     def forward(self, x):
         embedding = self.encoder_model(x)
@@ -133,13 +180,14 @@ class PredictionModel(nn.Module):
 
 if __name__ == "__main__":
     # Example usage
-    encoder_model = EncoderModel(input_dim=11, seq_len=30, latent_dim=32)
+    encoder_model = LatentQueryTransformerEncoder(feature_len=11, seq_len=30)
+    # encoder_model = MLPEncoder(feature_len=11, seq_len=30)
 
     # Example input: batch_size=16
     example_input = torch.randn(16, 30, 11)
     embedding = encoder_model(example_input)
     print(embedding.shape)  # Should print: torch.Size([16, 32])
 
-    output_model = MultiTaskModel(input_dim=32, hidden_dim=32)
+    output_model = MultiTaskClassifier()
     output = output_model(embedding)
     # print(output.shape)

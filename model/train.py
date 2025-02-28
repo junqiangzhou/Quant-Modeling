@@ -235,16 +235,12 @@ def split_train_test_data(
 
 
 def train_model(train_loader: DataLoader,
-                latent_dim=16,
-                hidden_dim=32,
                 epochs=10,
                 learning_rate=0.001) -> Tuple[PredictionModel, CustomLoss]:
     # Set seed before model/training
     set_seed(random_seed)
-    model = PredictionModel(input_dim=features.shape[2],
-                            seq_len=features.shape[1],
-                            latent_dim=latent_dim,
-                            hidden_dim=hidden_dim).to(device)
+    model = PredictionModel(feature_len=features.shape[2],
+                            seq_len=features.shape[1]).to(device)
     criterion = CustomLoss()
     # L2 regularization (weight decay)
     optimizer = torch.optim.Adam(model.parameters(),
@@ -382,8 +378,6 @@ if __name__ == "__main__":
     train_loader, test_dataset, idx_test = split_train_test_data(
         all_features, all_labels, batch_size=128)
     model, criterion = train_model(train_loader,
-                                   latent_dim=32,
-                                   hidden_dim=16,
                                    epochs=200,
                                    learning_rate=1e-3)
     total_params = sum(p.numel() for p in model.parameters())
