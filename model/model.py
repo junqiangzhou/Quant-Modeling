@@ -3,6 +3,7 @@ import math
 import torch.nn as nn
 import torch.nn.functional as F
 from enum import Enum
+import math
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 32
@@ -39,7 +40,6 @@ class MLPEncoder(nn.Module):
 
         # Pass through MLP
         latent_output = self.encoder(x)
-
         return latent_output
 
 
@@ -73,11 +73,13 @@ class TransformerEncoder(nn.Module):
     def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
         super(TransformerEncoder, self).__init__()
 
-        # Positional Encoding
-        self.pos_encoder = PositionalEncoding(feature_len, seq_len)
-
         # Input projection
         self.input_proj = nn.Linear(feature_len, LATENT_DIM)
+        self.ln = nn.LayerNorm(
+            LATENT_DIM)  # Normalizes across feature dimensions
+
+        # Positional Encoding
+        self.pos_encoder = PositionalEncoding(LATENT_DIM, seq_len)
 
         # Transformer Encoder
         encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
@@ -89,16 +91,15 @@ class TransformerEncoder(nn.Module):
         self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
 
     def forward(self, x):
-        x = x.float()
-        # x shape: (batch_size, seq_len, input_dim)
-        batch_size = x.shape[0]
-
-        # Add positional encoding
-        x = self.pos_encoder(x)
+        x = x.float()  # x shape: (batch_size, seq_len, input_dim)
+        # batch_size = x.shape[0]
 
         # Project input
         x = self.input_proj(x)  # (batch_size, seq_len, latent_dim)
+        x = self.ln(x)
 
+        # Add positional encoding
+        x = self.pos_encoder(x)
         # Transformer expects shape (seq_len, batch_size, latent_dim)
         x = x.transpose(0, 1)
 
@@ -119,11 +120,13 @@ class LatentQueryTransformerEncoder(nn.Module):
     def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
         super(LatentQueryTransformerEncoder, self).__init__()
 
-        # Positional Encoding
-        self.pos_encoder = PositionalEncoding(feature_len, seq_len)
-
         # Input projection
         self.input_proj = nn.Linear(feature_len, LATENT_DIM)
+        self.ln = nn.LayerNorm(
+            LATENT_DIM)  # Normalizes across feature dimensions
+
+        # Positional Encoding
+        self.pos_encoder = PositionalEncoding(LATENT_DIM, seq_len)
 
         # Latent query (learnable)
         self.latent_queries = nn.Parameter(
@@ -131,7 +134,9 @@ class LatentQueryTransformerEncoder(nn.Module):
 
         # Transformer Encoder
         encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
-                                                    nhead=nhead)
+                                                    nhead=nhead,
+                                                    dim_feedforward=4 * LATENT_DIM,
+                                                    dropout=0.1)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
                                                          num_layers=num_layers)
 
@@ -143,11 +148,12 @@ class LatentQueryTransformerEncoder(nn.Module):
         # x shape: (batch_size, seq_len, input_dim)
         batch_size = x.shape[0]
 
-        # Add positional encoding
-        x = self.pos_encoder(x)
-
         # Project input
         x = self.input_proj(x)  # (batch_size, seq_len, latent_dim)
+        x = self.ln(x)
+
+        # Add positional encoding
+        x = self.pos_encoder(x)
 
         # Prepare latent query
         latent_queries = self.latent_queries.expand(

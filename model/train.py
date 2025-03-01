@@ -249,12 +249,19 @@ def train_model(train_loader: DataLoader,
                                  lr=learning_rate,
                                  weight_decay=1e-4)
 
+    # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+
     # Train Neural Network
     epochs = epochs
     for epoch in range(epochs):
         model.train()
         for inputs, targets in train_loader:
             inputs, targets = inputs.to(device), targets.to(device)
+            check_nan_in_tensor(inputs)
+            check_inf_in_tensor(inputs)
+            check_nan_in_tensor(targets)
+            check_inf_in_tensor(targets)
+
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
@@ -272,6 +279,11 @@ def train_model(train_loader: DataLoader,
 
 
 def check_nan_in_tensor(tensor):
+    if np.isnan(tensor.cpu().numpy()).any():
+        raise ValueError("NaN detected in tensor")
+
+
+def check_inf_in_tensor(tensor):
     if np.isnan(tensor.cpu().numpy()).any():
         raise ValueError("NaN detected in tensor")
 
@@ -334,7 +346,6 @@ def eval_model(model, criterion, test_dataset, test_dates):
     pr_table = pd.DataFrame(data=pr,
                             index=["Precision", "Recall"],
                             columns=label_names)
-    print(pr_table)
 
     # Find the length of the longest sublist
     max_rows = max([len(value) for value in stats_date.values()])
@@ -366,6 +377,9 @@ if __name__ == "__main__":
             if np.isnan(features).any() or np.isnan(labels).any():
                 print(f"NaN detected in {stock}")
                 continue
+            if np.isinf(features).any() or np.isinf(labels).any():
+                print(f"INF detected in {stock}")
+                continue
         except:
             print(f"Error in processing {stock}")
             continue
@@ -379,13 +393,25 @@ if __name__ == "__main__":
 
     train_loader, test_dataset, idx_test = split_train_test_data(
         all_features, all_labels, batch_size=128)
-    model, criterion = train_model(train_loader,
-                                   epochs=200,
-                                   learning_rate=1e-3)
+
+    if True:
+        model, criterion = train_model(train_loader,
+                                       epochs=100,
+                                       learning_rate=1e-4)
+    else:
+        model = PredictionModel(feature_len=all_features.shape[2],
+                                seq_len=all_features.shape[1],
+                                encoder_type=ENCODER_TYPE).to(device)
+        model.load_state_dict(torch.load('./model/model.pth'))
+        model.eval()
+        criterion = CustomLoss()
+
     total_params = sum(p.numel() for p in model.parameters())
     print("total # of model params: ", total_params)
     predicted_labels, pr_table, dates_table = eval_model(
         model, criterion, test_dataset, all_dates[idx_test])
+    print(pr_table)
+    # print(dates_table)
 
     # add the predicted labels to the original dataframe
     for j, label in enumerate(label_names):
