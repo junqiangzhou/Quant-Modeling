@@ -15,6 +15,7 @@ class EncoderType(Enum):
     MLP = 0
     Transformer = 1
     LatentQueryTransformer = 2
+    DualAttentionTransformer = 3
 
 
 class MLPEncoder(nn.Module):
@@ -83,7 +84,10 @@ class TransformerEncoder(nn.Module):
 
         # Transformer Encoder
         encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
-                                                    nhead=nhead)
+                                                    nhead=nhead,
+                                                    dim_feedforward=4 *
+                                                    LATENT_DIM,
+                                                    batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
                                                          num_layers=num_layers)
 
@@ -100,16 +104,14 @@ class TransformerEncoder(nn.Module):
 
         # Add positional encoding
         x = self.pos_encoder(x)
-        # Transformer expects shape (seq_len, batch_size, latent_dim)
-        x = x.transpose(0, 1)
 
         # Pass through transformer encoder
         memory = self.transformer_encoder(
-            x)  # (seq_len, batch_size, latent_dim)
+            x)  # (batch_size, seq_len,  latent_dim)
 
         # Output projection - Aggregate over sequence dimension
         output = self.output_proj(
-            memory.mean(dim=0))  # (batch_size, latent_dim)
+            memory.mean(dim=1))  # (batch_size, latent_dim)
 
         return output
 
@@ -135,8 +137,9 @@ class LatentQueryTransformerEncoder(nn.Module):
         # Transformer Encoder
         encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
                                                     nhead=nhead,
-                                                    dim_feedforward=4 * LATENT_DIM,
-                                                    dropout=0.1)
+                                                    dim_feedforward=4 *
+                                                    LATENT_DIM,
+                                                    batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
                                                          num_layers=num_layers)
 
@@ -163,22 +166,93 @@ class LatentQueryTransformerEncoder(nn.Module):
         x = torch.cat([latent_queries, x],
                       dim=1)  # (batch_size, num_queries+seq_len, latent_dim)
 
-        # Transformer expects shape (num_queries+seq_len, batch_size, latent_dim)
-        x = x.transpose(0, 1)
-
         # Pass through transformer encoder
         memory = self.transformer_encoder(
-            x)  # (num_queries+seq_len, batch_size, latent_dim)
+            x)  # (batch_size, num_queries+seq_len, latent_dim)
 
         # Extract only the latent query outputs
-        query_output = memory[:
-                              LATENT_QUERY_DIM]  # (num_queries, batch_size, latent_dim)
-        # Reshape back to (batch_size, num_queries, latent_dim)
-        query_output = query_output.transpose(0, 1)
+        query_output = memory[:, :
+                              LATENT_QUERY_DIM, :]  # (batch_size, num_queries, latent_dim)
 
         # Output projection - Aggregate over sequence dimension
         output = self.output_proj(
             query_output.mean(dim=1))  # (batch_size, latent_dim)
+
+        return output
+
+
+class DualAttentionTransformerEncoder(nn.Module):
+
+    def __init__(self, feature_len, seq_len, num_heads=4, num_layers=2):
+        super(DualAttentionTransformerEncoder, self).__init__()
+
+        # Project input to latent space
+        self.input_proj = nn.Linear(feature_len, LATENT_DIM)
+        self.ln = nn.LayerNorm(
+            LATENT_DIM)  # Normalizes across feature dimensions
+
+        # Positional Encoding
+        self.pos_encoder = PositionalEncoding(LATENT_DIM, seq_len)
+
+        # Self-Attention on time steps
+        self.time_attention = nn.MultiheadAttention(embed_dim=LATENT_DIM,
+                                                    num_heads=num_heads,
+                                                    batch_first=True)
+
+        # Self-Attention on feature dimensions
+        self.feature_attention = nn.MultiheadAttention(embed_dim=seq_len,
+                                                       num_heads=6,
+                                                       batch_first=True)
+
+        # Cross-Attention on time-feature dimensions
+        self.cross_attention = nn.MultiheadAttention(embed_dim=LATENT_DIM,
+                                                     num_heads=num_heads,
+                                                     batch_first=True)
+
+        # Transformer Encoder Layer (for multi-head time and feature attention)
+        self.encoder_layers = nn.TransformerEncoderLayer(d_model=LATENT_DIM,
+                                                         nhead=num_heads,
+                                                         dim_feedforward=4 *
+                                                         LATENT_DIM,
+                                                         batch_first=True)
+        self.transformer_encoder = nn.TransformerEncoder(self.encoder_layers,
+                                                         num_layers=num_layers)
+
+        # Output layer
+        self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
+
+    def forward(self, x):
+        x = x.float()
+        # x shape: (batch_size, seq_len, input_dim)
+
+        # Step 1: Project input to latent space
+        x = self.input_proj(x)  # Shape: (batch_size, seq_len, latent_dim)
+        x = self.ln(x)
+
+        # Add positional encoding
+        x = self.pos_encoder(x)
+
+        # Step 2: Apply self-attention on time steps
+        x_time, _ = self.time_attention(
+            x, x, x)  # Query, Key, Value are all x (time-step attention)
+        # (batch_size, seq_len, latent_dim)
+
+        # Step 3: Apply self-attention on feature dimensions (transpose for feature attention)
+        x_feature_input = x.transpose(
+            1, 2)  # Shape: (batch_size, latent_dim, seq_len)
+        x_feature, _ = self.feature_attention(x_feature_input, x_feature_input,
+                                              x_feature_input)
+        # Transpose back to (batch_size, seq_len, latent_dim)
+        x_feature = x_feature.transpose(1, 2)
+
+        cross_output, _ = self.cross_attention(x_time, x_feature, x_feature)
+
+        # Step 4: Pass through Transformer Encoder (can model both time-step and feature attention)
+        memory = self.transformer_encoder(cross_output)
+
+        # Step 5: Final projection to output feature dimension - # Aggregate over sequence dimension
+        output = self.output_proj(
+            memory.mean(dim=1))  # (batch_size, latent_dim)
 
         return output
 
@@ -219,6 +293,9 @@ class PredictionModel(nn.Module):
                                                     seq_len=seq_len)
         elif encoder_type == EncoderType.LatentQueryTransformer:
             self.encoder_model = LatentQueryTransformerEncoder(
+                feature_len=feature_len, seq_len=seq_len)
+        elif encoder_type == EncoderType.DualAttentionTransformer:
+            self.encoder_model = DualAttentionTransformerEncoder(
                 feature_len=feature_len, seq_len=seq_len)
         else:
             raise ValueError("Invalid encoder type")
