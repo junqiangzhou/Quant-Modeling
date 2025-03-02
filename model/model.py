@@ -1,9 +1,8 @@
 import torch
-import math
 import torch.nn as nn
 import torch.nn.functional as F
 from enum import Enum
-import math
+from model.utils import PositionalEncoding, AttentionPooling
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 32
@@ -44,31 +43,6 @@ class MLPEncoder(nn.Module):
         return latent_output
 
 
-# Positional Encoding class
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, feature_len: int, seq_len: int):
-        super(PositionalEncoding, self).__init__()
-
-        pe = torch.zeros(seq_len, feature_len)
-        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(
-            torch.arange(0, feature_len, 2).float() *
-            (-math.log(10000.0) / feature_len))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        if feature_len % 2 == 0:
-            pe[:, 1::2] = torch.cos(position * div_term)
-        else:
-            pe[:, 1::2] = torch.cos(position * div_term[:-1])
-        pe = pe.unsqueeze(0)
-
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        x = x + self.pe
-        return x
-
-
 class TransformerEncoder(nn.Module):
 
     def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
@@ -91,6 +65,8 @@ class TransformerEncoder(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers,
                                                          num_layers=num_layers)
 
+        self.attention_pooling = AttentionPooling(LATENT_DIM)
+
         # Output layer
         self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
 
@@ -111,7 +87,7 @@ class TransformerEncoder(nn.Module):
 
         # Output projection - Aggregate over sequence dimension
         output = self.output_proj(
-            memory.mean(dim=1))  # (batch_size, latent_dim)
+            self.attention_pooling(memory))  # (batch_size, latent_dim)
 
         return output
 
@@ -218,6 +194,8 @@ class DualAttentionTransformerEncoder(nn.Module):
         self.transformer_encoder = nn.TransformerEncoder(self.encoder_layers,
                                                          num_layers=num_layers)
 
+        self.attention_pooling = AttentionPooling(LATENT_DIM)
+
         # Output layer
         self.output_proj = nn.Linear(LATENT_DIM, LATENT_DIM)
 
@@ -252,7 +230,7 @@ class DualAttentionTransformerEncoder(nn.Module):
 
         # Step 5: Final projection to output feature dimension - # Aggregate over sequence dimension
         output = self.output_proj(
-            memory.mean(dim=1))  # (batch_size, latent_dim)
+            self.attention_pooling(memory))  # (batch_size, latent_dim)
 
         return output
 
