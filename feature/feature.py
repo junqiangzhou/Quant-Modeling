@@ -17,22 +17,23 @@ kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 feature_names = [name + "_diff" for name in base_feature
                  ] + [name + "_start" for name in base_feature] + macd_feature
 
-# def normalize_features(features):
-#     # Normalize numerical features
-#     n_train_samples, n_timesteps, n_features = features.shape
 
-#     # Reshape to 2D: (n_samples * n_timesteps, n_features)
-#     features_reshaped = features.reshape(-1, n_features)
+def normalize_features(features):
+    # Normalize numerical features
+    n_train_samples, n_timesteps, n_features = features.shape
 
-#     # Scale using StandardScaler
-#     scaler = StandardScaler()
-#     features_scaled = scaler.fit_transform(features_reshaped)
+    # Reshape to 2D: (n_samples * n_timesteps, n_features)
+    features_reshaped = features.reshape(-1, n_features)
 
-#     # Reshape back to 3D: (n_samples, n_timesteps, n_features)
-#     features_scaled = features_scaled.reshape(n_train_samples, n_timesteps,
-#                                               n_features)
+    # Scale using StandardScaler
+    scaler = MinMaxScaler()
+    features_scaled = scaler.fit_transform(features_reshaped)
 
-#     return features_scaled
+    # Reshape back to 3D: (n_samples, n_timesteps, n_features)
+    features_scaled = features_scaled.reshape(n_train_samples, n_timesteps,
+                                              n_features)
+
+    return features_scaled
 
 
 def create_batch_feature(
@@ -56,7 +57,7 @@ def create_batch_feature(
         date_list.append(df.index[i])
 
     features = np.stack(batch_list, axis=0)
-    # features_scaled = normalize_features(features)
+    features_scaled = normalize_features(features)
     labels = np.stack(label_list, axis=0)
     dates = np.array(date_list)
     return features, labels, dates

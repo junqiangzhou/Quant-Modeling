@@ -5,8 +5,8 @@ from enum import Enum
 from model.utils import PositionalEncoding, AttentionPooling
 
 MLP_ENCODER_HIDDEN_DIM = 128
-MULTI_TASK_DECODER_HIDDEN_DIM = 32
-LATENT_DIM = 32
+MULTI_TASK_DECODER_HIDDEN_DIM = 128
+LATENT_DIM = 128
 LATENT_QUERY_DIM = 2
 
 
@@ -95,7 +95,7 @@ class TransformerEncoder(nn.Module):
 # Transformer Encoder Model with latent query
 class LatentQueryTransformerEncoder(nn.Module):
 
-    def __init__(self, feature_len, seq_len, nhead=4, num_layers=2):
+    def __init__(self, feature_len, seq_len, nhead=4, num_layers=4):
         super(LatentQueryTransformerEncoder, self).__init__()
 
         # Input projection
@@ -242,14 +242,18 @@ class MultiTaskClassifier(nn.Module):
         self.fc1 = nn.Linear(LATENT_DIM, MULTI_TASK_DECODER_HIDDEN_DIM)
         self.ln1 = nn.LayerNorm(MULTI_TASK_DECODER_HIDDEN_DIM
                                 )  # Normalizes across feature dimensions
-        # self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.dropout = nn.Dropout(p=0.01)  # 1% Dropout
+        self.fc2 = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
+                             MULTI_TASK_DECODER_HIDDEN_DIM)
+        self.ln2 = nn.LayerNorm(MULTI_TASK_DECODER_HIDDEN_DIM
+                                )  # Normalizes across feature dimensions
+        self.dropout = nn.Dropout(p=0.1)  # 1% Dropout
         self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM, 6)
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
         x = self.dropout(x)
-        # x = F.relu(self.fc2(x))
+        x = F.relu(self.ln2(self.fc2(x)))
+        x = self.dropout(x)
         logits = self.out(x)  # Raw logits for BCEWithLogitsLoss
 
         # Return raw logits (use CrossEntropyLoss directly)

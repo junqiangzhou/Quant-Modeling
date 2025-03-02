@@ -396,7 +396,7 @@ if __name__ == "__main__":
 
     if True:
         model, criterion = train_model(train_loader,
-                                       epochs=100,
+                                       epochs=200,
                                        learning_rate=1e-4)
     else:
         model = PredictionModel(feature_len=all_features.shape[2],

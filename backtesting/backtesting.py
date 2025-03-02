@@ -139,7 +139,7 @@ class BacktestSystem:
 if __name__ == "__main__":
     random.seed(random_seed_test)  # use different seed from data_fetcher
     stocks = fetch_stocks()
-    stocks_testing = random.sample(stocks, 20)
+    stocks_testing = random.sample(stocks, 30)
     # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
     start_date = "2021-01-01"
     end_date = "2022-12-31"

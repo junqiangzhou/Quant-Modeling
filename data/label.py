@@ -1,13 +1,30 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from itertools import chain
 
 # List of labels where the model is trained against and predicts at inference time
-label_feature = [
-    "trend_10days+", "trend_10days-", "trend_20days+", "trend_20days-",
-    "trend_30days+", "trend_30days-"
-]
 time_windows = [10, 20, 30]  # number of next rows to consider
+# classification labels for model to predict
+label_feature = list(
+    chain(*[[f"trend_{time}days+", f"trend_{time}days-"]
+            for time in time_windows]))
+# all columns added for labeling purpose
+# [max_close, max_duration, min_close, min_duration, trend_Xdays+, trend_Xdays-]
+label_columns = list(
+    chain(*[[
+        f"{time}days_max_close", f"{time}days_max_duration",
+        f"{time}days_min_close", f"{time}days_min_duration",
+        f"trend_{time}days+", f"trend_{time}days-"
+    ] for time in time_windows]))
+
+
+def perc_change(curr, future):
+    return (future - curr) / max(abs(curr), 1e-3)
+
+
+def days_diff(date1, date2):
+    return abs((date2 - date1).days)
 
 
 # Computes the labels, and here's the basic idea:
@@ -22,7 +39,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
-    labels = pd.DataFrame(columns=label_feature)
+    labels = pd.DataFrame(np.nan, columns=label_columns, index=df.index)
     while next_date := next(next_earning_date_generator, None):
         # print(f"Quarter bewteen: {curr_date} and {next_date}")
         # (???) somehow the earnings date is 1day ahead, so I need to start from index 2 here.
@@ -36,9 +53,6 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 
             # Skip 1st and last row as it's close to earnings date
             if i == 0 or i > len(df_window) - 6:
-                labels.loc[curr_index] = [
-                    np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
-                ]
                 continue
 
             label = []
@@ -66,9 +80,16 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                         < max_index):  # straight down or down comes first
                     down = 1
                     # print(f"Date: {curr_index}, Close: {curr_close}, <<<<<Down: Percent {(min_close - curr_close) / curr_close * 100}, Length {min_index - curr_index}")
-                label += [up, down]
+                label += [
+                    perc_change(curr_close, max_close),
+                    days_diff(curr_index, max_index),
+                    perc_change(curr_close, min_close),
+                    days_diff(curr_index, min_index), up, down
+                ]
             labels.loc[curr_index] = label
 
         curr_date = next_date + timedelta(days=1)
 
-    return labels
+    df = df.join(labels, how='right')
+    df = df.iloc[1:]  # drop 1st row
+    return df

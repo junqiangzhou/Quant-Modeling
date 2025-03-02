@@ -117,9 +117,7 @@ def create_dataset_with_labels(stock_symbol: str,
     df = download_data(stock_symbol, start_date, end_date)
 
     # create labels and add them into the dataframe
-    labels = compute_labels(df)
-    df = df.join(labels, how='right')
-    df = df.iloc[1:]  # drop 1st row
+    df = compute_labels(df)
 
     # Reformat the index to be just days
     df.index = df.index.date
