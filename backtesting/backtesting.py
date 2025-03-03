@@ -74,6 +74,7 @@ class BacktestSystem:
             cost_base = self.cost_base[stock]
             price = self.stocks_data_pool[stock].loc[date]["Close"]
             if price < cost_base * 0.92:
+                # print(f"Must cut loss and sell, {date}")
                 return Action.Sell
 
         features = compute_online_feature(self.stocks_data_pool[stock], date)
@@ -106,6 +107,7 @@ class BacktestSystem:
 
         price = self.stocks_data_pool[stock].loc[date]["Close"]
         if self.fund > 100:
+            # print(f"++++++Execute to buy, {date}")
             shares = int(self.fund / price)
             self.stocks_hold[stock] += shares
             self.cost_base[stock] = price
@@ -118,6 +120,7 @@ class BacktestSystem:
 
         price = self.stocks_data_pool[stock].loc[date]["Close"]
         if self.stocks_hold[stock] > 0:
+            # print(f"++++++Execute to sell, {date}")
             shares = self.stocks_hold[stock]
 
             self.fund += shares * price
@@ -140,7 +143,9 @@ if __name__ == "__main__":
     random.seed(random_seed_test)  # use different seed from data_fetcher
     stocks = fetch_stocks()
     stocks_testing = random.sample(stocks, 30)
-    # stocks = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"]
+    # stocks_testing = [
+    #     "TSLA"
+    # ]  # , "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
     start_date = "2021-01-01"
     end_date = "2022-12-31"
     testing = BacktestSystem(stocks_testing, start_date, end_date)

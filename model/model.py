@@ -1,20 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from enum import Enum
+
 from model.utils import PositionalEncoding, AttentionPooling
+from data import label
+from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 128
 LATENT_DIM = 128
 LATENT_QUERY_DIM = 2
-
-
-class EncoderType(Enum):
-    MLP = 0
-    Transformer = 1
-    LatentQueryTransformer = 2
-    DualAttentionTransformer = 3
 
 
 class MLPEncoder(nn.Module):
@@ -289,6 +284,40 @@ class PredictionModel(nn.Module):
         output = self.output_model(embedding)
 
         return output
+
+
+class CustomLoss(nn.Module):
+
+    def __init__(self):
+        super(CustomLoss, self).__init__()
+        self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
+                                           2.0]).to(device)
+        # Add higher weight to positive class
+        positive_weights = torch.tensor([3.0]).to(device)
+        self.bce_loss = nn.BCEWithLogitsLoss(self.class_weights,
+                                             pos_weight=positive_weights)
+
+    def forward(self, logits, targets):
+        loss = self.bce_loss(logits, targets)
+
+        # Negative labels for (+, -) are the same, so we can use contrastive loss
+        alpha = 0.1
+        for i in range(0, len(label.label_feature), 2):
+            # Extract logits for class 0 and class 1
+            logit_up = logits[:, i]
+            logit_down = logits[:, i + 1]
+
+            # Mask: Only consider cases where both labels are negative (0)
+            mask = (targets[:, i] == 0) & (targets[:, i + 1] == 0)
+
+            # Contrastive loss: minimize L2 distance when both labels are negative
+            contrastive_loss = torch.mean(
+                (logit_up[mask] - logit_down[mask])**2) if mask.any() else 0.0
+
+            # Combine losses
+            loss += alpha * self.class_weights[i] * contrastive_loss
+
+        return loss
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ def create_batch_feature(
         date_list.append(df.index[i])
 
     features = np.stack(batch_list, axis=0)
-    features_scaled = normalize_features(features)
+    # features_scaled = normalize_features(features)
     labels = np.stack(label_list, axis=0)
     dates = np.array(date_list)
     return features, labels, dates

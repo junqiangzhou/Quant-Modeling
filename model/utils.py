@@ -1,6 +1,32 @@
 import torch
 import math
 import torch.nn as nn
+import numpy as np
+from config.config import device
+from torch.utils.data import DataLoader, Dataset
+
+
+def check_nan_in_tensor(tensor):
+    if np.isnan(tensor.cpu().numpy()).any():
+        raise ValueError("NaN detected in tensor")
+
+
+def check_inf_in_tensor(tensor):
+    if np.isnan(tensor.cpu().numpy()).any():
+        raise ValueError("NaN detected in tensor")
+
+
+class StockDataset(Dataset):
+
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 
 # Positional Encoding class
