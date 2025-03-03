@@ -103,7 +103,7 @@ if __name__ == "__main__":
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []
     samples_list = []
-    for i, stock in enumerate(stocks_testing[:5]):
+    for i, stock in enumerate(stocks_testing):
         print(">>>>>>stock: ", stock)
         try:
             df = create_dataset_with_labels(stock,

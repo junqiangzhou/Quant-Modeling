@@ -24,14 +24,14 @@ def visualize_dataset(df: pd.DataFrame,
     pred_labels = [label + "_pred" for label in viz_labels]
 
     df_labels = df[viz_labels].copy()
-    for label in viz_labels:
-        df_labels[label] = df_labels[label] * scale * 1.2
+    for i, label in enumerate(viz_labels):
+        df_labels[label] = df_labels[label] * scale * (1 + 0.1 * i)
         df_labels[label] = df_labels[label].replace(0, np.nan)
     # add prediction labels
     if viz_pred:
-        for label in pred_labels:
+        for i, label in enumerate(pred_labels):
             df_labels[label] = df[label]
-            df_labels[label] = df_labels[label] * scale * 0.8
+            df_labels[label] = df_labels[label] * scale * (0.8 + 0.1 * i)
             df_labels[label] = df_labels[label].replace(0, np.nan)
 
     apds = [mpf.make_addplot(df[['MA_10', 'MA_20', 'MA_50']])]
