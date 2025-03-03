@@ -1,5 +1,6 @@
 import pandas as pd
 import pandas_ta as ta
+import numpy as np
 
 
 # Function to compute Moving Averages
@@ -34,5 +35,41 @@ def add_kdj(df):
 
         # Compute J Line: J = 3 * K - 2 * D
         df["J"] = 3 * df["STOCHk_14_3_3"] - 2 * df["STOCHd_14_3_3"]
+
+    return df
+
+
+def add_rsi(df, column='Close', period=14):
+    """
+    Add the Relative Strength Index (RSI) for a given DataFrame.
+    
+    Parameters:
+    df (pd.DataFrame): DataFrame containing price data.
+    column (str): Column name for the closing price.
+    period (int): Lookback period for RSI calculation (default=14).
+    
+    Returns:
+    pd.Series: RSI values.
+    """
+    delta = df[column].diff(1)  # Calculate price changes
+
+    # Separate gains and losses
+    gain = np.where(delta > 0, delta, 0)
+    loss = np.where(delta < 0, -delta, 0)
+
+    # Use exponential moving average (EMA) for stability
+    avg_gain = pd.Series(gain).ewm(span=period, min_periods=period).mean()
+    avg_loss = pd.Series(loss).ewm(span=period, min_periods=period).mean()
+    # print(avg_gain)
+    # print(avg_loss)
+
+    # Compute Relative Strength (RS)
+    rs = avg_gain / (avg_loss + 1e-10)  # Avoid division by zero
+
+    # Compute RSI
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.fillna(method="bfill")
+
+    df["RSI_14"] = rsi.values
 
     return df

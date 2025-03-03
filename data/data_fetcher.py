@@ -5,7 +5,7 @@ import numpy as np
 import random
 
 from datetime import datetime, timedelta
-from data.indicator import add_macd, add_moving_averages, add_kdj
+from data.indicator import add_macd, add_moving_averages, add_kdj, add_rsi
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 
@@ -93,6 +93,7 @@ def download_data(stock_symbol: str,
         df = add_moving_averages(df, windows=windows)
         df = add_macd(df)
         df = add_kdj(df)
+        df = add_rsi(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")

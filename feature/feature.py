@@ -14,6 +14,7 @@ label_feature = label.label_feature
 look_back_window = 30
 macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
 kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
+rsi_feature = ["RSI_14"]
 feature_names = [name + "_diff" for name in base_feature
                  ] + [name + "_start" for name in base_feature] + macd_feature
 
