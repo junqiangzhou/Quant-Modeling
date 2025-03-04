@@ -15,8 +15,9 @@ look_back_window = 30
 macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
 kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 rsi_feature = ["RSI_14"]
-feature_names = [name + "_diff" for name in base_feature
-                 ] + [name + "_start" for name in base_feature] + macd_feature
+feature_names = [name + "_diff" for name in base_feature] + [
+    name + "_start" for name in base_feature
+] + macd_feature + kdj_feature + rsi_feature
 
 
 def normalize_features(features):
@@ -58,10 +59,10 @@ def create_batch_feature(
         date_list.append(df.index[i])
 
     features = np.stack(batch_list, axis=0)
-    # features_scaled = normalize_features(features)
+    features_scaled = normalize_features(features)
     labels = np.stack(label_list, axis=0)
     dates = np.array(date_list)
-    return features, labels, dates
+    return features_scaled, labels, dates
 
 
 def compute_online_feature(df: pd.DataFrame,
@@ -77,4 +78,8 @@ def compute_online_feature(df: pd.DataFrame,
     history = df.iloc[start_index:end_index]
     history = history[feature_names]
     history = history.values
-    return history
+    if np.isnan(history).any() or np.isinf(history).any():
+        return None
+    features = np.expand_dims(history, axis=0)
+    features_scaled = normalize_features(features)
+    return features_scaled

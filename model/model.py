@@ -317,6 +317,29 @@ class CustomLoss(nn.Module):
             # Combine losses
             loss += alpha * self.class_weights[i] * contrastive_loss
 
+        # Positive labels for (+, -) should not be the same, so add contrastive loss
+        margin = 0.5
+        for i in range(0, len(label.label_feature), 2):
+            # Extract logits for class 0 and class 1
+            logit_up = logits[:, i]
+            logit_down = logits[:, i + 1]
+
+            # Mask: Only consider cases where either label is positive (1)
+            mask = (targets[:, i] == 1) | (targets[:, i + 1] == 1)
+
+            # Compute distance between logit_up and logit_down
+            distance = torch.abs(
+                logit_up - logit_down
+            )  #F.pairwise_distance(logit_up.unsqueeze(1), logit_down.unsqueeze(1), p=2)
+
+            # Compute loss only for masked samples
+            contrastive_loss = torch.mean(
+                mask.float() *
+                F.relu(margin - distance))  # Ensuring minimum separation
+
+            # Combine losses
+            loss += alpha * self.class_weights[i] * contrastive_loss
+
         return loss
 
 

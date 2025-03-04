@@ -22,7 +22,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from data import label
-from config.config import ENCODER_TYPE, device
+from config.config import ENCODER_TYPE, device, random_seed
 from model.eval import eval_model
 
 # # 下载AAPL一年的股票数据
@@ -38,7 +38,6 @@ from model.eval import eval_model
 # scaler = MinMaxScaler(feature_range=(0, 1))
 # scaled_data = scaler.fit_transform(df_pct_change.values)
 
-random_seed = 42
 label_names = label.label_feature
 
 

@@ -77,6 +77,7 @@ def visualize_dataset(df: pd.DataFrame,
              style='yahoo',
              addplot=apds,
              title=f'{stock} Daily Candlestick Chart with MA and MACD',
+             figsize=(18, 10),
              ylabel='Price ($)',
              ylabel_lower='Volume',
              panel_ratios=(6, 2))

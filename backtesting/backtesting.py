@@ -1,9 +1,9 @@
-from data.data_fetcher import download_data
+from data.data_fetcher import download_data, get_date_back
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
-from config.config import ENCODER_TYPE
+from config.config import ENCODER_TYPE, random_seed
 
 from typing import List
 from numpy.typing import NDArray
@@ -14,8 +14,7 @@ import numpy as np
 from enum import Enum
 import collections
 import random
-
-random_seed_test = 20
+import bisect
 
 
 class Action(Enum):
@@ -34,12 +33,17 @@ class BacktestSystem:
         self.stocks_data_pool = {}
         for stock in stock_lists:
             try:
-                df = download_data(stock, start_date, end_date)
+                shifted_start_date = get_date_back(start_date,
+                                                   look_back_window + 30)
+                df = download_data(stock, shifted_start_date, end_date)
+                # Trim data within the interested time window
+                df = df.loc[start_date:end_date]
                 df.index = df.index.date
                 self.stocks_data_pool[stock] = df
             except ValueError:
                 print(f"{stock} data not available")
-        self.start_date = df.index[0]
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        self.start_date = df.index[bisect.bisect_left(df.index, start_date)]
         self.end_date = df.index[-1]
 
         # Load the saved parameters
@@ -66,7 +70,8 @@ class BacktestSystem:
         # Must sell all shares before earnings day
         if date in self.stocks_data_pool[stock].index and self.stocks_data_pool[
                 stock].loc[date]["Earnings_Date"]:
-            # print(f"Earnings day must sell, {date}")
+            if debug_mode:
+                print(f"Earnings day must sell, {date}")
             return Action.Sell
 
         # Must sell to cut-loss
@@ -74,29 +79,52 @@ class BacktestSystem:
             cost_base = self.cost_base[stock]
             price = self.stocks_data_pool[stock].loc[date]["Close"]
             if price < cost_base * 0.92:
-                # print(f"Must cut loss and sell, {date}")
+                if debug_mode:
+                    print(f"Must cut loss and sell, {date}")
                 return Action.Sell
 
         features = compute_online_feature(self.stocks_data_pool[stock], date)
-        if features is not None:
-            features_tensor = torch.tensor(features,
-                                           dtype=torch.float32).unsqueeze(0)
-        else:
+        if features is None or np.isnan(features).any() or np.isinf(
+                features).any():
+            # print(f"NaN or INF detected in {stock} on {date}")
             return Action.Hold
+        else:
+            features_tensor = torch.tensor(features, dtype=torch.float32)
 
         with torch.no_grad():
             logits = self.model(features_tensor)
             probs = torch.sigmoid(
                 logits).float().numpy()  # convert logits to probabilities
 
-        probs_up = sum(probs[0, ::2]) / 3.0
-        probs_down = sum(probs[0, 1:probs.shape[1] + 1:2]) / 3.0
+        def should_buy(probs: NDArray) -> bool:
+            trend_up_probs = probs[0, ::2]
+            # trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
 
-        if probs_down > 0.5:  # need to sell
-            # print(f"------Predicted to sell, {date}")
+            if min(trend_up_probs) >= 0.6 and trend_up_probs[-1] >= 0.8:
+                return True
+
+            return False
+
+        def should_sell(probs: NDArray) -> bool:
+            # trend_up_probs = probs[0, ::2]
+            trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
+
+            if min(trend_down_probs) >= 0.6 and trend_down_probs[-1] >= 0.8:
+                return True
+
+            return False
+
+        if should_sell(probs):  # need to sell
+            if debug_mode:
+                print(
+                    f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[0, 1:probs.shape[1] + 1:2]}"
+                )
             return Action.Sell
-        elif probs_up > 0.5:  # good to buy
-            # print(f"++++++Predicted to buy, {date}")
+        elif should_buy(probs):  # good to buy
+            if debug_mode:
+                print(
+                    f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[0, ::2]}"
+                )
             return Action.Buy
         else:
             return Action.Hold
@@ -107,7 +135,8 @@ class BacktestSystem:
 
         price = self.stocks_data_pool[stock].loc[date]["Close"]
         if self.fund > 100:
-            # print(f"++++++Execute to buy, {date}")
+            if debug_mode:
+                print(f">>>>>>>>>>>Execute to buy, {date}")
             shares = int(self.fund / price)
             self.stocks_hold[stock] += shares
             self.cost_base[stock] = price
@@ -120,7 +149,8 @@ class BacktestSystem:
 
         price = self.stocks_data_pool[stock].loc[date]["Close"]
         if self.stocks_hold[stock] > 0:
-            # print(f"++++++Execute to sell, {date}")
+            if debug_mode:
+                print(f"<<<<<<<<<<<<Execute to sell, {date}")
             shares = self.stocks_hold[stock]
 
             self.fund += shares * price
@@ -140,16 +170,17 @@ class BacktestSystem:
 
 
 if __name__ == "__main__":
-    random.seed(random_seed_test)  # use different seed from data_fetcher
-    stocks = fetch_stocks()
-    stocks_testing = random.sample(stocks, 30)
-    # stocks_testing = [
-    #     "TSLA"
-    # ]  # , "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
-    start_date = "2021-01-01"
-    end_date = "2022-12-31"
-    testing = BacktestSystem(stocks_testing, start_date, end_date)
-    for stock in stocks_testing:
+    random.seed(random_seed)  # use different seed from data_fetcher
+    _, testing_stocks = fetch_stocks()
+    # testing_stocks = random.sample(testing_stocks, 30)
+    # testing_stocks = [
+    #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
+    # ]
+    debug_mode = False
+    start_date = "2023-01-01"
+    end_date = "2024-12-31"
+    testing = BacktestSystem(testing_stocks, start_date, end_date)
+    for stock in testing_stocks:
         testing.reset()
 
         if stock not in testing.stocks_data_pool:
@@ -164,9 +195,11 @@ if __name__ == "__main__":
                 end_date]["Close"]
             print(
                 f"Price change: {(end_price - start_price) / start_price * 100: .2f} %",
-                end="   ")
+                end="      ")
         except:
+            print(f"Failed to compute price change {stock}")
             continue
+
         while current_date <= end_date:
             action = testing.compute_action(stock, current_date)
             if action == Action.Buy:

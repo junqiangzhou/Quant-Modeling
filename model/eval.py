@@ -5,13 +5,15 @@ import torch
 import pandas as pd
 import numpy as np
 import random
+import bisect
+from datetime import datetime
 
-from data.data_fetcher import get_stock_df, create_dataset_with_labels
+from data.data_fetcher import get_stock_df, create_dataset_with_labels, get_date_back
 from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from data import label
 from model.model import PredictionModel, CustomLoss
-from config.config import ENCODER_TYPE, device
+from config.config import ENCODER_TYPE, device, random_seed, look_back_window
 from data.stocks_fetcher import fetch_stocks
 
 label_names = label.label_feature
@@ -94,25 +96,27 @@ def eval_model(model, criterion, test_dataset, test_dates):
 if __name__ == "__main__":
     start_date = "2023-01-01"
     end_date = "2024-12-31"
-    stocks = fetch_stocks()
 
-    random_seed = 21
-    random.seed(random_seed)
-    stocks_testing = random.sample(stocks, 30)
+    # shift the start date back to get more data for history features
+    shifted_start_date = get_date_back(start_date, look_back_window + 20)
+    _, testing_stocks = fetch_stocks()
 
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []
     samples_list = []
-    for i, stock in enumerate(stocks_testing):
+    for i, stock in enumerate(testing_stocks):
         print(">>>>>>stock: ", stock)
         try:
             df = create_dataset_with_labels(stock,
-                                            start_date,
+                                            shifted_start_date,
                                             end_date,
                                             vis=False)
+            if df is None:
+                continue
 
             # print("total # of data samples: ", df.shape[0])
             features, labels, dates = create_batch_feature(df)
+
             if np.isnan(features).any() or np.isnan(labels).any():
                 print(f"NaN detected in {stock}")
                 continue

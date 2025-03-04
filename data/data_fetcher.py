@@ -1,20 +1,20 @@
 import pandas as pd
 from yfinance import Ticker
-from yahoo_fin import stock_info as si
+# from yahoo_fin import stock_info as si
 import numpy as np
 import random
+import bisect
 
 from datetime import datetime, timedelta
 from data.indicator import add_macd, add_moving_averages, add_kdj, add_rsi
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
+from config.config import random_seed, look_back_window
 
 # List of basic data downloaded from Yahoo Finance
 base_feature = [
     'Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50'
 ]
-
-random_seed = 42
 
 
 def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:
@@ -85,8 +85,16 @@ def download_data(stock_symbol: str,
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
+
     df = ticker.history(start=shifted_start_date, end=end_date, interval="1d")
-    print(f"stock {stock_symbol} shape: {df.shape}")
+    market_cap = ticker.info["marketCap"]
+    # eps = ticker.info["trailingEps"]
+    # # Skip stocks with market cap less than 100 billion
+    # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
+    #     return None
+    print(
+        f"stock {stock_symbol} shape: {df.shape}, market cap: {int(market_cap / 1.0e9)}b"
+    )
 
     # Add technical indicator
     try:
@@ -116,6 +124,8 @@ def create_dataset_with_labels(stock_symbol: str,
                                vis: bool = False) -> pd.DataFrame:
     # Download raw data with technical indicators
     df = download_data(stock_symbol, start_date, end_date)
+    if df is None:
+        return None
 
     # create labels and add them into the dataframe
     df = compute_labels(df)
@@ -131,16 +141,18 @@ if __name__ == "__main__":
     viz = False
     random.seed(random_seed)
 
-    all_stocks = fetch_stocks()
+    training_stocks, _ = fetch_stocks()
     # Choose N stocks for training
     # stock_lists = [
     #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
     #     "JPM", "NFLX", "WMT"
     # ]
-    stock_training = random.sample(all_stocks, 30)
+    # training_stocks = random.sample(training_stocks, 30)
+    print("# of stocks: ", len(training_stocks))
     # Generate training data
     print("Generate training data...")
-    for i, stock in enumerate(stock_training):
+    all_df = None
+    for i, stock in enumerate(training_stocks):
         print(">>>>>>stock: ", stock)
         try:
             df = create_dataset_with_labels(stock,
@@ -150,7 +162,10 @@ if __name__ == "__main__":
         except:
             print(f"Error in processing {stock}")
             continue
-        if i == 0:
+        if df is None:
+            continue
+
+        if all_df is None:
             all_df = df
         else:
             all_df = pd.concat([all_df, df], ignore_index=False)
