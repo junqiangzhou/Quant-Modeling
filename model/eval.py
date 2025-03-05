@@ -49,7 +49,7 @@ def eval_model(model, criterion, test_dataset, test_dates):
 
         probs = torch.sigmoid(
             logits).float().cpu().numpy()  # convert logits to probabilities
-        preds = probs > 0.5  # binary predictions
+        preds = probs > 0.6  # binary predictions
 
         for col in range(n):
             for row in range(targets.shape[0]):

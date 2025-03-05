@@ -15,9 +15,10 @@ look_back_window = 30
 macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
 kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 rsi_feature = ["RSI_14"]
-feature_names = [name + "_diff" for name in base_feature] + [
-    name + "_start" for name in base_feature
-] + macd_feature + kdj_feature + rsi_feature
+buy_sell_signals_encoded = label.buy_sell_signals_encoded
+feature_names = [name + "_diff" for name in base_feature
+                 ] + [name + "_start"
+                      for name in base_feature] + buy_sell_signals_encoded
 
 
 def normalize_features(features):
@@ -49,7 +50,7 @@ def create_batch_feature(
                    ):  # Skip earnings day where we don't compute labels
             continue
 
-        history = df.iloc[i - look_back_window:i]
+        history = df.iloc[i - look_back_window + 1:i + 1]
         history = history[feature_names]
         history = history.values
         batch_list.append(history)
@@ -62,6 +63,11 @@ def create_batch_feature(
     features_scaled = normalize_features(features)
     labels = np.stack(label_list, axis=0)
     dates = np.array(date_list)
+
+    # check how many positive labels
+    ones_per_column = np.sum(labels == 1, axis=0)
+    print(f"Positive labels: {ones_per_column}")
+
     return features_scaled, labels, dates
 
 
@@ -70,7 +76,7 @@ def compute_online_feature(df: pd.DataFrame,
     if date not in df.index:
         return None
 
-    end_index = bisect.bisect_left(df.index, date) - 1
+    end_index = bisect.bisect_left(df.index, date) + 1
     start_index = end_index - look_back_window
     if start_index <= 0:
         return None

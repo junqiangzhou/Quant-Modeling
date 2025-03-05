@@ -7,8 +7,8 @@ from data import label
 from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
-MULTI_TASK_DECODER_HIDDEN_DIM = 128
-LATENT_DIM = 128
+MULTI_TASK_DECODER_HIDDEN_DIM = 32
+LATENT_DIM = 32
 LATENT_QUERY_DIM = 2
 
 

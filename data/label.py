@@ -18,6 +18,15 @@ label_columns = list(
         f"trend_{time}days+", f"trend_{time}days-"
     ] for time in time_windows]))
 
+buy_sell_signals = [
+    "MA_10_50_Crossover_Signal", "MA_5_20_Crossover_Signal",
+    "MACD_Crossover_Signal", "RSI_Over_Bought_Signal", "BB_Signal"
+]
+buy_sell_signals_encoded = [
+    f"{signal}_{suffix}" for signal in buy_sell_signals
+    for suffix in ["0", "-1", "1"]
+]
+
 
 def perc_change(curr, future):
     return (future - curr) / max(abs(curr), 1e-3)
@@ -25,6 +34,15 @@ def perc_change(curr, future):
 
 def days_diff(date1, date2):
     return abs((date2 - date1).days)
+
+
+def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
+    # one-hot encoding on buy_sell_signals
+    df = pd.get_dummies(df,
+                        columns=buy_sell_signals,
+                        prefix={col: col
+                                for col in buy_sell_signals})
+    return df
 
 
 # Computes the labels, and here's the basic idea:
@@ -40,16 +58,19 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
     labels = pd.DataFrame(np.nan, columns=label_columns, index=df.index)
-    while next_date := next(next_earning_date_generator, None):
+    while curr_date < df.index[-1]:
         # print(f"Quarter bewteen: {curr_date} and {next_date}")
         # (???) somehow the earnings date is 1day ahead, so I need to start from index 2 here.
 
+        next_date = next(next_earning_date_generator, df.index[-1])
         # Iterate over all rows before next earning date
         df_window = df.loc[curr_date:next_date]
         for i in range(len(df_window)):
             # Get the index and row at position i
             curr_index, curr_close = df_window.index[i], df_window[
                 "Close"].iloc[i]
+            buy_sell_signals_vals = df_window.loc[curr_index,
+                                                  buy_sell_signals].values
 
             # Skip 1st and last row as it's close to earnings date
             if i == 0 or i > len(df_window) - 6:
@@ -110,12 +131,23 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 up, down = 0, 0
                 if is_stock_trending_up(curr_close, max_close, max_index,
                                         min_close, min_index):
-                    up = 1
+                    if any(buy_sell_signals_vals == 1):
+                        up = 1
+                        # print(
+                        #     f"Buy signal, {curr_index.date().strftime('%Y-%m-%d')}"
+                        # )
+                    # else:
+                    # print(f"No indicator for buy signal, {curr_index.date().strftime('%Y-%m-%d')}")
                     # print(f"Date: {curr_index}, Close: {curr_close}, >>>>>Up: Percent {(max_close - curr_close) / curr_close * 100}, Length {max_index - curr_index}")
-                elif is_stock_trending_down(
-                        curr_close, max_close, max_index, min_close,
-                        min_index):  # straight down or down comes first
-                    down = 1
+                elif is_stock_trending_down(curr_close, max_close, max_index,
+                                            min_close, min_index):
+                    if any(buy_sell_signals_vals == -1):
+                        # print(
+                        #     f"Sell signal, {curr_index.date().strftime('%Y-%m-%d')}"
+                        # )
+                        down = 1
+                    # else:
+                    # print(f"No indicator for sell signal", {curr_index.date().strftime('%Y-%m-%d')})
                     # print(f"Date: {curr_index}, Close: {curr_close}, <<<<<Down: Percent {(min_close - curr_close) / curr_close * 100}, Length {min_index - curr_index}")
                 label += [
                     perc_change(curr_close, max_close),
@@ -129,4 +161,6 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.join(labels, how='right')
     df = df.iloc[1:]  # drop 1st row
+
+    df = one_hot_encoder(df)
     return df

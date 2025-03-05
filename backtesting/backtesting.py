@@ -1,4 +1,5 @@
 from data.data_fetcher import download_data, get_date_back
+from data.label import one_hot_encoder
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
@@ -39,6 +40,7 @@ class BacktestSystem:
                 # Trim data within the interested time window
                 df = df.loc[start_date:end_date]
                 df.index = df.index.date
+                df = one_hot_encoder(df)
                 self.stocks_data_pool[stock] = df
             except ValueError:
                 print(f"{stock} data not available")
@@ -100,7 +102,7 @@ class BacktestSystem:
             trend_up_probs = probs[0, ::2]
             # trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
 
-            if min(trend_up_probs) >= 0.6 and trend_up_probs[-1] >= 0.8:
+            if min(trend_up_probs) >= 0.6:  # and trend_up_probs[-1] >= 0.5:
                 return True
 
             return False
@@ -109,7 +111,8 @@ class BacktestSystem:
             # trend_up_probs = probs[0, ::2]
             trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
 
-            if min(trend_down_probs) >= 0.6 and trend_down_probs[-1] >= 0.8:
+            if min(trend_down_probs
+                   ) >= 0.6:  # and trend_down_probs[-1] >= 0.5:
                 return True
 
             return False
@@ -173,13 +176,15 @@ if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
     _, testing_stocks = fetch_stocks()
     # testing_stocks = random.sample(testing_stocks, 30)
-    # testing_stocks = [
-    #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
-    # ]
-    debug_mode = False
-    start_date = "2023-01-01"
-    end_date = "2024-12-31"
+    testing_stocks = [
+        "TSLA"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
+    ]
+    debug_mode = True
+    start_date = "2020-01-01"
+    end_date = "2020-12-31"
+
     testing = BacktestSystem(testing_stocks, start_date, end_date)
+    print("current_date: ", start_date, " end_date: ", end_date)
     for stock in testing_stocks:
         testing.reset()
 

@@ -6,14 +6,16 @@ import random
 import bisect
 
 from datetime import datetime, timedelta
-from data.indicator import add_macd, add_moving_averages, add_kdj, add_rsi
+from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
+                            add_obv, add_vwap, add_bollinger_bands, add_atr,
+                            add_buy_sell_signals)
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 from config.config import random_seed, look_back_window
 
 # List of basic data downloaded from Yahoo Finance
 base_feature = [
-    'Open', 'High', 'Low', 'Close', 'Volume', 'MA_10', 'MA_20', 'MA_50'
+    'Open', 'High', 'Low', 'Close', 'Volume', 'MA_5', 'MA_10', 'MA_20', 'MA_50'
 ]
 
 
@@ -80,7 +82,7 @@ def get_date_back(date_str: str, delta_days: int) -> str:
 def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
-                  windows=[10, 20, 50]) -> pd.DataFrame:
+                  windows=[5, 10, 20, 50]) -> pd.DataFrame:
     ticker = Ticker(stock_symbol)
 
     # We need to look back some time window so that all technical indicators are all valid.
@@ -102,6 +104,11 @@ def download_data(stock_symbol: str,
         df = add_macd(df)
         df = add_kdj(df)
         df = add_rsi(df)
+        df = add_obv(df)
+        df = add_vwap(df)
+        df = add_bollinger_bands(df)
+        df = add_atr(df)
+        df = add_buy_sell_signals(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")

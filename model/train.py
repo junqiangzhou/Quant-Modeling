@@ -80,7 +80,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     # Count the occurrences of each combination
     combination_counts = Counter(y_combinations)
     zero_label = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-    freq_max = max(
+    freq_max = sum(
         [v for k, v in combination_counts.items() if k != zero_label])
     print(combination_counts)
 
@@ -90,7 +90,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     sampling_strategy = {}
     for k, v in combination_counts.items():
         if k == zero_label:
-            sampling_strategy[hash(k)] = v  #freq_max
+            sampling_strategy[hash(k)] = freq_max
         else:
             sampling_strategy[hash(k)] = v
 
@@ -173,7 +173,9 @@ def split_train_test_data(
     # Oversampling makes testing worse, need to revisit
     # X_train, y_train = multi_label_random_oversample(X_train, y_train, random_state=random_seed)
     # Downsampling
-    # X_train, y_train = multi_label_random_downsample(X_train, y_train, random_state=random_seed)
+    X_train, y_train = multi_label_random_downsample(X_train,
+                                                     y_train,
+                                                     random_state=random_seed)
 
     train_dataset = StockDataset(X_train, y_train)
     test_dataset = StockDataset(X_test, y_test)
