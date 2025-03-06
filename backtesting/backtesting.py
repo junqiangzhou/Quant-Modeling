@@ -176,11 +176,11 @@ if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
     _, testing_stocks = fetch_stocks()
     # testing_stocks = random.sample(testing_stocks, 30)
-    testing_stocks = [
-        "TSLA"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
-    ]
-    debug_mode = True
-    start_date = "2020-01-01"
+    # testing_stocks = [
+    #     "TSLA"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
+    # ]
+    debug_mode = False
+    start_date = "2015-01-01"
     end_date = "2020-12-31"
 
     testing = BacktestSystem(testing_stocks, start_date, end_date)

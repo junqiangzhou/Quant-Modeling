@@ -19,8 +19,11 @@ label_columns = list(
     ] for time in time_windows]))
 
 buy_sell_signals = [
-    "MA_10_50_Crossover_Signal", "MA_5_20_Crossover_Signal",
-    "MACD_Crossover_Signal", "RSI_Over_Bought_Signal", "BB_Signal"
+    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal",, "MA_5_50_Crossover_Signal",
+    "MA_10_50_Crossover_Signal",  #"MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
+    "MACD_Crossover_Signal",
+    "RSI_Over_Bought_Signal",
+    "BB_Signal"
 ]
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals

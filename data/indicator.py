@@ -145,14 +145,14 @@ def add_buy_sell_signals(df):
     df_shift = df.shift(1)
 
     # Moving Average Crossover: Detect when short_time MA crosses above or below long_time MA
-    df['MA_10_50_Crossover_Signal'] = 0
-    short_time, long_time = "MA_10", "MA_50"
+    df['MA_5_10_Crossover_Signal'] = 0
+    short_time, long_time = "MA_5", "MA_10"
     df.loc[(df[short_time] > df[long_time]) &
            (df_shift[short_time] <= df_shift[long_time]),
-           'MA_10_50_Crossover_Signal'] = 1  # Golden Cross (Buy)
+           'MA_5_10_Crossover_Signal'] = 1  # Golden Cross (Buy)
     df.loc[(df[short_time] < df[long_time]) &
            (df_shift[short_time] >= df_shift[long_time]),
-           'MA_10_50_Crossover_Signal'] = -1  # Death Cross (Sell)
+           'MA_5_10_Crossover_Signal'] = -1  # Death Cross (Sell)
 
     df['MA_5_20_Crossover_Signal'] = 0
     short_time, long_time = "MA_5", "MA_20"
@@ -162,6 +162,42 @@ def add_buy_sell_signals(df):
     df.loc[(df[short_time] < df[long_time]) &
            (df_shift[short_time] >= df_shift[long_time]),
            'MA_5_20_Crossover_Signal'] = -1  # Death Cross (Sell)
+
+    df['MA_5_50_Crossover_Signal'] = 0
+    short_time, long_time = "MA_5", "MA_50"
+    df.loc[(df[short_time] > df[long_time]) &
+           (df_shift[short_time] <= df_shift[long_time]),
+           'MA_5_50_Crossover_Signal'] = 1  # Golden Cross (Buy)
+    df.loc[(df[short_time] < df[long_time]) &
+           (df_shift[short_time] >= df_shift[long_time]),
+           'MA_5_50_Crossover_Signal'] = -1  # Death Cross (Sell)
+
+    df['MA_10_20_Crossover_Signal'] = 0
+    short_time, long_time = "MA_10", "MA_20"
+    df.loc[(df[short_time] > df[long_time]) &
+           (df_shift[short_time] <= df_shift[long_time]),
+           'MA_10_20_Crossover_Signal'] = 1  # Golden Cross (Buy)
+    df.loc[(df[short_time] < df[long_time]) &
+           (df_shift[short_time] >= df_shift[long_time]),
+           'MA_10_20_Crossover_Signal'] = -1  # Death Cross (Sell)
+
+    df['MA_10_50_Crossover_Signal'] = 0
+    short_time, long_time = "MA_10", "MA_50"
+    df.loc[(df[short_time] > df[long_time]) &
+           (df_shift[short_time] <= df_shift[long_time]),
+           'MA_10_50_Crossover_Signal'] = 1  # Golden Cross (Buy)
+    df.loc[(df[short_time] < df[long_time]) &
+           (df_shift[short_time] >= df_shift[long_time]),
+           'MA_10_50_Crossover_Signal'] = -1  # Death Cross (Sell)
+
+    df['MA_20_50_Crossover_Signal'] = 0
+    short_time, long_time = "MA_20", "MA_50"
+    df.loc[(df[short_time] > df[long_time]) &
+           (df_shift[short_time] <= df_shift[long_time]),
+           'MA_20_50_Crossover_Signal'] = 1  # Golden Cross (Buy)
+    df.loc[(df[short_time] < df[long_time]) &
+           (df_shift[short_time] >= df_shift[long_time]),
+           'MA_20_50_Crossover_Signal'] = -1  # Death Cross (Sell)
 
     # MACD Crossover: Detect when MACD line crosses above or below Signal line
     macd, signal = 'MACD_12_26_9', 'MACDs_12_26_9'

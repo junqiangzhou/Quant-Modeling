@@ -16,9 +16,8 @@ macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
 kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 rsi_feature = ["RSI_14"]
 buy_sell_signals_encoded = label.buy_sell_signals_encoded
-feature_names = [name + "_diff" for name in base_feature
-                 ] + [name + "_start"
-                      for name in base_feature] + buy_sell_signals_encoded
+feature_names = [name + "_diff"
+                 for name in base_feature] + buy_sell_signals_encoded
 
 
 def normalize_features(features):

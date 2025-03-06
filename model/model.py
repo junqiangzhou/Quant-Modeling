@@ -7,8 +7,8 @@ from data import label
 from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
-MULTI_TASK_DECODER_HIDDEN_DIM = 32
-LATENT_DIM = 32
+MULTI_TASK_DECODER_HIDDEN_DIM = 64
+LATENT_DIM = 64
 LATENT_QUERY_DIM = 2
 
 
@@ -301,7 +301,7 @@ class CustomLoss(nn.Module):
         loss = self.bce_loss(logits, targets)
 
         # Negative labels for (+, -) are the same, so we can use contrastive loss
-        alpha = 0.1
+        alpha = 1.0
         for i in range(0, len(label.label_feature), 2):
             # Extract logits for class 0 and class 1
             logit_up = logits[:, i]
