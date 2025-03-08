@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import xgboost as xgb
+import numpy as np
+from sklearn.model_selection import GridSearchCV
 
 from model.utils import PositionalEncoding, AttentionPooling
 from data import label
@@ -341,6 +344,58 @@ class CustomLoss(nn.Module):
             loss += alpha * self.class_weights[i] * contrastive_loss
 
         return loss
+
+
+class XGBoostClassifier:
+
+    def __init__(self, num_classes):
+        self.num_classes = num_classes
+        xgb_model = xgb.XGBClassifier(objective='binary:logistic',
+                                      eval_metric='logloss',
+                                      use_label_encoder=False,
+                                      verbosity=0)
+        self.model = [xgb_model for _ in range(num_classes)]
+        # Define hyperparameters for tuning
+        self.param_grid = {
+            'max_depth': [3, 5, 7],
+            'learning_rate': [0.01, 0.1, 0.2],
+            'n_estimators': [50, 100, 200]
+        }
+
+    def fit(self, inputs, targets):
+        if targets.shape[1] != self.num_classes:
+            raise ValueError("Number of classes mismatch")
+
+        # inputs shape: (batch_size, seq_len, input_dim)
+        X_train = inputs[:, -1, :]  # Use only the last row for training
+
+        # Perform grid search with cross-validation
+        for i in range(self.num_classes):
+            xgb_model = self.model[i]
+            param_grid = self.param_grid
+            y_class = targets[:, i]
+            grid_search = GridSearchCV(xgb_model,
+                                       param_grid,
+                                       cv=5,
+                                       scoring='accuracy',
+                                       n_jobs=-1)
+            grid_search.fit(X_train, y_class)
+
+            # Train the best model
+            self.model[i] = grid_search.best_estimator_
+
+    def predict(self, inputs):
+
+        X_test = inputs[:, -1, :]  # Use only the last row for prediction
+        y_pred = None
+        for i in range(self.num_classes):
+            xgb_model = self.model[i]
+            y_pred_class = xgb_model.predict_proba(X_test)[:, 1]
+            if y_pred is None:
+                y_pred = y_pred_class
+            else:
+                y_pred = np.column_stack((y_pred, y_pred_class))
+        return y_pred
 
 
 if __name__ == "__main__":

@@ -106,15 +106,14 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     if perc_change(
                             curr_close,
                             max_close) > up_perc_threshold and perc_change(
-                                curr_close,
-                                min_close) > down_perc_threshold:
+                                curr_close, min_close) > down_perc_threshold:
                         return True
                     # max exceeds up threshold, and min exceeds down threshold, but max comes before min
                     if perc_change(
-                            curr_close, max_close
-                    ) > up_perc_threshold and perc_change(
-                            curr_close, min_close
-                    ) < down_perc_threshold and max_index < min_index:
+                            curr_close,
+                            max_close) > up_perc_threshold and perc_change(
+                                curr_close, min_close
+                            ) < down_perc_threshold and max_index < min_index:
                         return True
                     return False
 
@@ -123,17 +122,17 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     if max_close < curr_close:  # straight down
                         return True
                     # min exceeds down threshold, and max stays below up threshold
-                    if perc_change(curr_close, max_close
-                                   ) < up_perc_threshold and perc_change(
-                                       curr_close,
-                                       min_close) < down_perc_threshold:
+                    if perc_change(
+                            curr_close,
+                            max_close) < up_perc_threshold and perc_change(
+                                curr_close, min_close) < down_perc_threshold:
                         return True
                     # min exceeds down threshold, and max exceeds up threshold, but min comes before max
                     if perc_change(
-                            curr_close, max_close
-                    ) > up_perc_threshold and perc_change(
-                            curr_close, min_close
-                    ) < down_perc_threshold and min_index < max_index:
+                            curr_close,
+                            max_close) > up_perc_threshold and perc_change(
+                                curr_close, min_close
+                            ) < down_perc_threshold and min_index < max_index:
                         return True
                     return False
 

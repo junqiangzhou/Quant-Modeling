@@ -7,7 +7,7 @@ from data.data_fetcher import get_stock_df
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
 
-from model.model import PredictionModel, CustomLoss
+from model.model import PredictionModel, CustomLoss, XGBoostClassifier
 from typing import Tuple
 import pandas as pd
 import numpy as np
@@ -22,8 +22,8 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from data import label
-from config.config import ENCODER_TYPE, device, random_seed
-from model.eval import eval_model
+from config.config import ModelType, ENCODER_TYPE, MODEL_TYPE, device, random_seed
+from model.eval import eval_model, eval_xgboost_model
 
 # # 下载AAPL一年的股票数据
 # df = yf.download('AAPL', start='2023-01-01', end='2024-01-01', interval='1d')
@@ -177,6 +177,9 @@ def split_train_test_data(
     X_train, y_train = multi_label_random_downsample(X_train,
                                                      y_train,
                                                      random_state=random_seed)
+    X_test, y_test = multi_label_random_downsample(X_test,
+                                                   y_test,
+                                                   random_state=random_seed)
 
     train_dataset = StockDataset(X_train, y_train)
     test_dataset = StockDataset(X_test, y_test)
@@ -231,6 +234,29 @@ def train_model(train_loader: DataLoader,
     return model, criterion
 
 
+def train_xgboost_model(train_loader: DataLoader) -> XGBoostClassifier:
+
+    model = XGBoostClassifier(num_classes=len(label_names))
+
+    # Train xGBoost
+    X_train, y_train = None, None
+    for inputs, targets in train_loader:
+        check_nan_in_tensor(inputs)
+        check_inf_in_tensor(inputs)
+        check_nan_in_tensor(targets)
+        check_inf_in_tensor(targets)
+
+        if X_train is None:
+            X_train, y_train = inputs, targets
+        else:
+            X_train, y_train = np.concatenate(
+                (X_train, inputs), axis=0), np.concatenate((y_train, targets),
+                                                           axis=0)
+
+    model.fit(X_train, y_train)
+    return model
+
+
 if __name__ == "__main__":
     csv_file = "data/stock_training_2023-01-01_2024-12-31.csv"
     if not os.path.exists(csv_file):
@@ -269,17 +295,24 @@ if __name__ == "__main__":
     train_loader, test_dataset, idx_test = split_train_test_data(
         all_features, all_labels, batch_size=128)
 
-    model, criterion = train_model(train_loader,
-                                   epochs=200,
-                                   learning_rate=1e-4)
-
-    total_params = sum(p.numel() for p in model.parameters())
-    print("total # of model params: ", total_params)
+    if MODEL_TYPE == ModelType.TORCH:
+        model, criterion = train_model(train_loader,
+                                       epochs=200,
+                                       learning_rate=1e-4)
+        total_params = sum(p.numel() for p in model.parameters())
+        print("total # of model params: ", total_params)
+    else:
+        model = train_xgboost_model(train_loader)
 
     # Eval model performance
-    predict_probs, predicted_labels, pr_table, dates_table = eval_model(
-        model, criterion, test_dataset, all_dates[idx_test])
+    if MODEL_TYPE == ModelType.TORCH:
+        predict_probs, predicted_labels, pr_table, dates_table = eval_model(
+            model, criterion, test_dataset, all_dates[idx_test])
+    else:
+        predict_probs, predicted_labels, pr_table, dates_table = eval_xgboost_model(
+            model, test_dataset, all_dates[idx_test])
     print(pr_table)
     # print(dates_table)
 
-    torch.save(model.state_dict(), './model/model.pth')
+    if MODEL_TYPE == ModelType.TORCH:
+        torch.save(model.state_dict(), './model/model.pth')

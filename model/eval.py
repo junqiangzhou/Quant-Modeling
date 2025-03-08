@@ -93,6 +93,74 @@ def eval_model(model, criterion, test_dataset, test_dates):
     return probs, preds, pr_table, dates_table
 
 
+def eval_xgboost_model(model, test_dataset, test_dates):
+    # Model Evaluation
+
+    # m, n = labels.shape
+    metrics = ["TP", "FP", "FN"]
+    n = len(label_names)
+
+    names_metrics = [
+        metric + name
+        for metric, name in list(itertools.product(label_names, metrics))
+    ]
+    stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
+    stats_date = {name: [] for name in names_metrics}
+
+    inputs = test_dataset.X
+    targets = test_dataset.y
+    # # Check input data
+    # check_nan_in_tensor(inputs)
+    # check_nan_in_tensor(targets)
+
+    # Check model prediction
+    probs = model.predict(inputs)
+    # check_nan_in_tensor(probs)
+
+    preds = probs > 0.6  # binary predictions
+
+    for col in range(n):
+        for row in range(targets.shape[0]):
+            if targets[row, col] == 1 and preds[row, col] == 1:
+                stats_count[col]["TP"] += 1
+                stats_date[label_names[col] + "TP"].append(test_dates[row])
+            elif targets[row, col] == 0 and preds[row, col] == 1:
+                stats_count[col]["FP"] += 1
+                stats_date[label_names[col] + "FP"].append(test_dates[row])
+            elif targets[row, col] == 1 and preds[row, col] == 0:
+                stats_count[col]["FN"] += 1
+                stats_date[label_names[col] + "FN"].append(test_dates[row])
+        stats_date[label_names[col] + "TP"].sort()
+        stats_date[label_names[col] + "FP"].sort()
+        stats_date[label_names[col] + "FN"].sort()
+
+        # print(f"{label_names[col]} TP count: {stats_count[col]['TP']}")
+        # print(f"{label_names[col]} FP count: {stats_count[col]['FP']}")
+        # print(f"{label_names[col]} FN count: {stats_count[col]['FN']}")
+
+    # calculate precision and recall metrics
+    pr = [[0.0] * n, [0.0] * n]
+    for col in range(n):
+        if stats_count[col]["TP"] + stats_count[col]["FP"] > 0:
+            pr[0][col] = stats_count[col]["TP"] / float(
+                stats_count[col]["TP"] + stats_count[col]["FP"])
+        if stats_count[col]["TP"] + stats_count[col]["FN"] > 0:
+            pr[1][col] = stats_count[col]["TP"] / float(
+                stats_count[col]["TP"] + stats_count[col]["FN"])
+    pr_table = pd.DataFrame(data=pr,
+                            index=["Precision", "Recall"],
+                            columns=label_names)
+
+    # Find the length of the longest sublist
+    max_rows = max([len(value) for value in stats_date.values()])
+    padded_array = np.array([
+        dates + [None] * (max_rows - len(dates))
+        for dates in stats_date.values()
+    ]).transpose()
+    dates_table = pd.DataFrame(data=padded_array, columns=names_metrics)
+    return probs, preds, pr_table, dates_table
+
+
 if __name__ == "__main__":
     start_date = "2023-01-01"
     end_date = "2024-12-31"
