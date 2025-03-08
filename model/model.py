@@ -291,7 +291,7 @@ class CustomLoss(nn.Module):
     def __init__(self):
         super(CustomLoss, self).__init__()
         self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
-                                           2.0]).to(device)
+                                           3.0]).to(device)
         # Add higher weight to positive class
         positive_weights = torch.tensor([3.0]).to(device)
         self.bce_loss = nn.BCEWithLogitsLoss(self.class_weights,

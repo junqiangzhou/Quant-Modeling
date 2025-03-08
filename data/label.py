@@ -19,11 +19,11 @@ label_columns = list(
     ] for time in time_windows]))
 
 buy_sell_signals = [
-    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal",, "MA_5_50_Crossover_Signal",
-    "MA_10_50_Crossover_Signal",  #"MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
+    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
+    "MA_10_50_Crossover_Signal",  # "MA_20_50_Crossover_Signal", "MA_10_20_Crossover_Signal",
     "MACD_Crossover_Signal",
     "RSI_Over_Bought_Signal",
-    "BB_Signal"
+    "BB_Signal",  #"VWAP_Crossover_Signal"
 ]
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals
@@ -45,6 +45,11 @@ def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
                         columns=buy_sell_signals,
                         prefix={col: col
                                 for col in buy_sell_signals})
+    # Fill missing category with 0s.
+    for col in buy_sell_signals_encoded:
+        if col not in df.columns:
+            df[col] = 0
+
     return df
 
 
@@ -101,14 +106,15 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     if perc_change(
                             curr_close,
                             max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close) > down_perc_threshold:
+                                curr_close,
+                                min_close) > down_perc_threshold:
                         return True
                     # max exceeds up threshold, and min exceeds down threshold, but max comes before min
                     if perc_change(
-                            curr_close,
-                            max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close
-                            ) < down_perc_threshold and max_index < min_index:
+                            curr_close, max_close
+                    ) > up_perc_threshold and perc_change(
+                            curr_close, min_close
+                    ) < down_perc_threshold and max_index < min_index:
                         return True
                     return False
 
@@ -117,17 +123,17 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     if max_close < curr_close:  # straight down
                         return True
                     # min exceeds down threshold, and max stays below up threshold
-                    if perc_change(
-                            curr_close,
-                            max_close) < up_perc_threshold and perc_change(
-                                curr_close, min_close) < down_perc_threshold:
+                    if perc_change(curr_close, max_close
+                                   ) < up_perc_threshold and perc_change(
+                                       curr_close,
+                                       min_close) < down_perc_threshold:
                         return True
                     # min exceeds down threshold, and max exceeds up threshold, but min comes before max
                     if perc_change(
-                            curr_close,
-                            max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close
-                            ) < down_perc_threshold and min_index < max_index:
+                            curr_close, max_close
+                    ) > up_perc_threshold and perc_change(
+                            curr_close, min_close
+                    ) < down_perc_threshold and min_index < max_index:
                         return True
                     return False
 

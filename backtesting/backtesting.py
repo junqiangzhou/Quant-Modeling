@@ -181,38 +181,41 @@ if __name__ == "__main__":
     # ]
     debug_mode = False
     start_date = "2015-01-01"
-    end_date = "2020-12-31"
+    end_dates = [
+        "2015-12-31", "2016-12-31", "2018-12-31", "2018-12-31", "2020-12-31"
+    ]
 
-    testing = BacktestSystem(testing_stocks, start_date, end_date)
-    print("current_date: ", start_date, " end_date: ", end_date)
-    for stock in testing_stocks:
-        testing.reset()
+    for end_date in end_dates:
+        testing = BacktestSystem(testing_stocks, start_date, end_date)
+        print("current_date: ", start_date, " end_date: ", end_date)
+        for stock in testing_stocks:
+            testing.reset()
 
-        if stock not in testing.stocks_data_pool:
-            print(f"{stock} data not available")
-            continue
+            if stock not in testing.stocks_data_pool:
+                print(f"{stock} data not available")
+                continue
 
-        df = testing.stocks_data_pool[stock]
-        current_date, end_date = testing.start_date, testing.end_date
-        print(f">>>>>{stock}")
-        try:
-            start_price, end_price = df.loc[current_date]["Close"], df.loc[
-                end_date]["Close"]
+            df = testing.stocks_data_pool[stock]
+            current_date, end_date = testing.start_date, testing.end_date
+            print(f">>>>>{stock}")
+            try:
+                start_price, end_price = df.loc[current_date]["Close"], df.loc[
+                    end_date]["Close"]
+                print(
+                    f"Price change: {(end_price - start_price) / start_price * 100: .2f} %",
+                    end="      ")
+            except:
+                print(f"Failed to compute price change {stock}")
+                continue
+
+            while current_date <= end_date:
+                action = testing.compute_action(stock, current_date)
+                if action == Action.Buy:
+                    testing.buy(stock, current_date)
+                elif action == Action.Sell:
+                    testing.sell(stock, current_date)
+
+                current_date += timedelta(days=1)
             print(
-                f"Price change: {(end_price - start_price) / start_price * 100: .2f} %",
-                end="      ")
-        except:
-            print(f"Failed to compute price change {stock}")
-            continue
-
-        while current_date <= end_date:
-            action = testing.compute_action(stock, current_date)
-            if action == Action.Buy:
-                testing.buy(stock, current_date)
-            elif action == Action.Sell:
-                testing.sell(stock, current_date)
-
-            current_date += timedelta(days=1)
-        print(
-            f"Quant profit: {testing.get_profit(end_date) / testing.init_fund * 100: .2f} %"
-        )
+                f"Quant profit: {testing.get_profit(end_date) / testing.init_fund * 100: .2f} %"
+            )

@@ -3,6 +3,12 @@ import pandas_ta as ta
 import numpy as np
 
 
+# Function to compute trading volume:
+def add_trading_volume(df):
+    df['Trading_Volume'] = df['Volume'] * (df['High'] + df['Low']) / 2.0
+    return df
+
+
 # Function to compute Moving Averages
 def add_moving_averages(df, windows=[10, 20, 50]):
     for window in windows:
@@ -219,8 +225,14 @@ def add_buy_sell_signals(df):
     # # OBV Signal: Buy if OBV is increasing, Sell if decreasing
     # df['OBV_Signal'] = np.where(df['OBV'] > df['OBV'].shift(1), 1, -1)
 
-    # # VWAP Signal: Buy if price is above VWAP, Sell if below
-    # df['VWAP_Signal'] = np.where(df['Close'] > df['VWAP'], 1, -1)
+    # VWAP Signal: Buy if price is cross over VWAP, Sell if below
+    df['VWAP_Crossover_Signal'] = 0
+    df.loc[(df['Close'] > df['VWAP']) &
+           (df_shift['Close'] <= df_shift['VWAP']),
+           'VWAP_Crossover_Signal'] = 1  # Bullish VWAP Crossover (Buy)
+    df.loc[(df['Close'] < df['VWAP']) &
+           (df_shift['Close'] >= df_shift['VWAP']),
+           'VWAP_Crossover_Signal'] = -1  # Bearish VWAP Crossover (Sell)
 
     # Bollinger Bands (BB) Signal:
     df['BB_Signal'] = 0

@@ -8,14 +8,22 @@ import bisect
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_buy_sell_signals)
+                            add_buy_sell_signals, add_trading_volume)
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 from config.config import random_seed, look_back_window
 
 # List of basic data downloaded from Yahoo Finance
 base_feature = [
-    'Open', 'High', 'Low', 'Close', 'Volume', 'MA_5', 'MA_10', 'MA_20', 'MA_50'
+    'Open',
+    'High',
+    'Low',
+    'Close',
+    'Volume',
+    'MA_5',
+    'MA_10',
+    'MA_20',
+    'MA_50',  # 'Trading_Volume'
 ]
 
 
@@ -100,6 +108,7 @@ def download_data(stock_symbol: str,
 
     # Add technical indicator
     try:
+        df = add_trading_volume(df)
         df = add_moving_averages(df, windows=windows)
         df = add_macd(df)
         df = add_kdj(df)
@@ -117,7 +126,7 @@ def download_data(stock_symbol: str,
     df = df.loc[start_date:end_date]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
-    df = add_detla_from_date(df, df.index[0])
+    # df = add_detla_from_date(df, df.index[0])
 
     df = add_earnings_data(df, ticker, start_date, end_date)
     # Add a column for stock symbol

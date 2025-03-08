@@ -82,6 +82,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     zero_label = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     freq_max = sum(
         [v for k, v in combination_counts.items() if k != zero_label])
+    freq_zero = combination_counts[zero_label]
     print(combination_counts)
 
     # RandomUnderSampler requires class labels
@@ -90,7 +91,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     sampling_strategy = {}
     for k, v in combination_counts.items():
         if k == zero_label:
-            sampling_strategy[hash(k)] = freq_max
+            sampling_strategy[hash(k)] = min(freq_max, freq_zero)
         else:
             sampling_strategy[hash(k)] = v
 
