@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from itertools import chain
 
 # List of labels where the model is trained against and predicts at inference time
-time_windows = [10, 20, 30, 60]  # number of next rows to consider
+time_windows = [5, 10, 20, 30]  # number of next rows to consider
 # classification labels for model to predict
 label_feature = list(chain(*[[f"trend_{time}days"] for time in time_windows]))
 # all columns added for labeling purpose
@@ -39,15 +39,16 @@ def days_diff(date1, date2):
 
 def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
     # one-hot encoding on buy_sell_signals
-    df = pd.get_dummies(df,
-                        columns=buy_sell_signals,
-                        prefix={col: col
-                                for col in buy_sell_signals})
+    df_dummies = pd.get_dummies(df,
+                                columns=buy_sell_signals,
+                                prefix={col: col
+                                        for col in buy_sell_signals})
     # Fill missing category with 0s.
     for col in buy_sell_signals_encoded:
-        if col not in df.columns:
-            df[col] = 0
+        if col not in df_dummies.columns:
+            df_dummies[col] = 0
 
+    df = df.join(df_dummies[buy_sell_signals_encoded])
     return df
 
 

@@ -10,7 +10,7 @@ from datetime import datetime
 from sklearn.metrics import confusion_matrix
 
 from data.data_fetcher import get_stock_df, create_dataset_with_labels, get_date_back
-from feature.feature import create_batch_feature
+from feature.feature import create_batch_feature, feature_names
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from data import label
 from model.model import PredictionModel, CustomLoss
@@ -18,9 +18,27 @@ from config.config import ENCODER_TYPE, device, random_seed, look_back_window
 from data.stocks_fetcher import fetch_stocks
 
 label_names = label.label_feature
+buy_sell_signals = label.buy_sell_signals
 
 
 def eval_model(model, criterion, test_dataset):
+
+    # Check buy/sell signals from features
+    buy_signal_encoded = [signal + "_1" for signal in buy_sell_signals]
+    buy_columns = [
+        i for i, name in enumerate(feature_names) if name in buy_signal_encoded
+    ]
+    buy_features = test_dataset.X[:, -1, buy_columns]
+    feature_has_buy = np.any(buy_features == 1, axis=1)
+
+    sell_signal_encoded = [signal + "_-1" for signal in buy_sell_signals]
+    sell_columns = [
+        i for i, name in enumerate(feature_names)
+        if name in sell_signal_encoded
+    ]
+    sell_features = test_dataset.X[:, -1, sell_columns]
+    feature_has_sell = np.any(sell_features == 1, axis=1)
+
     # Model Evaluation
     model.eval()
     with torch.no_grad():
@@ -47,7 +65,13 @@ def eval_model(model, criterion, test_dataset):
             prob = torch.softmax(
                 logit,
                 dim=1).float().cpu().numpy()  # convert logits to probabilities
+
             pred = np.argmax(prob, axis=1)  # binary predictions
+            for j in range(len(pred)):
+                if pred[j] == 1 and not feature_has_buy[j]:
+                    pred[j] = 0
+                elif pred[j] == 2 and not feature_has_sell[j]:
+                    pred[j] = 0
 
             cm = confusion_matrix(target.squeeze().cpu().numpy(),
                                   pred,

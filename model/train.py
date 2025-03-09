@@ -300,7 +300,7 @@ if __name__ == "__main__":
 
     if MODEL_TYPE == ModelType.TORCH:
         model, criterion = train_model(train_loader,
-                                       epochs=150,
+                                       epochs=100,
                                        learning_rate=1e-4)
         total_params = sum(p.numel() for p in model.parameters())
         print("total # of model params: ", total_params)

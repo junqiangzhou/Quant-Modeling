@@ -1,5 +1,5 @@
 from data.data_fetcher import download_data, get_date_back
-from data.label import one_hot_encoder, label_feature
+from data.label import one_hot_encoder, label_feature, buy_sell_signals
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
@@ -93,6 +93,8 @@ class BacktestSystem:
         else:
             features_tensor = torch.tensor(features, dtype=torch.float32)
 
+        buy_sell_signals_vals = self.stocks_data_pool[stock].loc[
+            date, buy_sell_signals].values
         with torch.no_grad():
             logits = self.model(features_tensor)
             logits = logits.reshape(len(label_feature), 3)
@@ -103,15 +105,19 @@ class BacktestSystem:
         def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
             trend_up_labels = np.sum(pred == 1)
-            if trend_up_labels == len(label_feature):
+            trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
+            if trend_up_labels == len(
+                    label_feature) and trend_up_indicators >= 1:
                 return True
 
             return False
 
         def should_sell(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
-            trend_up_labels = np.sum(pred == 2)
-            if trend_up_labels == len(label_feature):
+            trend_down_labels = np.sum(pred == 2)
+            trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
+            if trend_down_labels == len(
+                    label_feature) and trend_down_indicators >= 1:
                 return True
 
             return False

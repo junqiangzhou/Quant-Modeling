@@ -11,7 +11,7 @@ from data import label
 from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
-MULTI_TASK_DECODER_HIDDEN_DIM = 64
+MULTI_TASK_DECODER_HIDDEN_DIM = 256
 LATENT_DIM = 64
 LATENT_QUERY_DIM = 2
 
@@ -245,7 +245,7 @@ class MultiTaskClassifier(nn.Module):
                              MULTI_TASK_DECODER_HIDDEN_DIM)
         self.ln2 = nn.LayerNorm(MULTI_TASK_DECODER_HIDDEN_DIM
                                 )  # Normalizes across feature dimensions
-        self.dropout = nn.Dropout(p=0.1)  # 1% Dropout
+        self.dropout = nn.Dropout(p=0.1)  # 10% Dropout
         self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
                              3 * len(label.label_feature))
 
@@ -298,7 +298,7 @@ class CustomLoss(nn.Module):
         # self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
         #                                    3.0]).to(device)
         # Add different weights to each class
-        weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
+        weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
         self.ce_loss = nn.CrossEntropyLoss(weight=weights)
 
     def forward(self, logits, targets):

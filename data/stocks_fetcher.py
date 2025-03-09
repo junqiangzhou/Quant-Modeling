@@ -25,7 +25,7 @@ def fetch_stocks():
 
     # Combine and remove duplicates
     all_symbols = list(set(sp500_symbols + nasdaq_100_symbols))
-    all_symbols = sorted(all_symbols)[:60]
+    all_symbols = sorted(all_symbols)
     print(f"Total unique symbols: {len(all_symbols)}")
     random.seed(42)
     random.shuffle(all_symbols)
