@@ -1,5 +1,5 @@
 from data.data_fetcher import download_data, get_date_back
-from data.label import one_hot_encoder
+from data.label import one_hot_encoder, label_feature
 from data.stocks_fetcher import fetch_stocks
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
@@ -95,24 +95,23 @@ class BacktestSystem:
 
         with torch.no_grad():
             logits = self.model(features_tensor)
-            probs = torch.sigmoid(
-                logits).float().numpy()  # convert logits to probabilities
+            logits = logits.reshape(len(label_feature), 3)
+            probs = torch.softmax(
+                logits,
+                dim=1).float().numpy()  # convert logits to probabilities
 
         def should_buy(probs: NDArray) -> bool:
-            trend_up_probs = probs[0, ::2]
-            # trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
-
-            if min(trend_up_probs) >= 0.6:  # and trend_up_probs[-1] >= 0.5:
+            pred = np.argmax(probs, axis=1)
+            trend_up_labels = np.sum(pred == 1)
+            if trend_up_labels == len(label_feature):
                 return True
 
             return False
 
         def should_sell(probs: NDArray) -> bool:
-            # trend_up_probs = probs[0, ::2]
-            trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
-
-            if min(trend_down_probs
-                   ) >= 0.6:  # and trend_down_probs[-1] >= 0.5:
+            pred = np.argmax(probs, axis=1)
+            trend_up_labels = np.sum(pred == 2)
+            if trend_up_labels == len(label_feature):
                 return True
 
             return False
@@ -181,9 +180,7 @@ if __name__ == "__main__":
     # ]
     debug_mode = False
     start_date = "2015-01-01"
-    end_dates = [
-        "2015-12-31", "2016-12-31", "2018-12-31", "2018-12-31", "2020-12-31"
-    ]
+    end_dates = ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
 
     for end_date in end_dates:
         testing = BacktestSystem(testing_stocks, start_date, end_date)

@@ -12,7 +12,7 @@ def fetch_stocks():
     # Read the tables on the webpage
     tables = pd.read_html(url)
     # The first table on the page contains the NASDAQ-100 components
-    nasdaq_100_symbols = tables[4]["Symbol"].tolist()
+    nasdaq_100_symbols = tables[4]["Ticker"].tolist()
 
     # print(f"NASDAQ-100 symbols ({len(nasdaq_100_symbols)}):", nasdaq_100_symbols)
 

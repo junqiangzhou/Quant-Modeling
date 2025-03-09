@@ -79,11 +79,11 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
 
     # Count the occurrences of each combination
     combination_counts = Counter(y_combinations)
-    zero_label = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-    freq_max = sum(
+    zero_label = (0.0, ) * len(label_names)
+    freq_sum = sum(
         [v for k, v in combination_counts.items() if k != zero_label])
     freq_zero = combination_counts[zero_label]
-    print(combination_counts)
+    # print(combination_counts)
 
     # RandomUnderSampler requires class labels
     y_comb_class = np.array([hash(label) for label in y_combinations])
@@ -91,7 +91,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     sampling_strategy = {}
     for k, v in combination_counts.items():
         if k == zero_label:
-            sampling_strategy[hash(k)] = min(freq_max, freq_zero)
+            sampling_strategy[hash(k)] = min(freq_sum, freq_zero)
         else:
             sampling_strategy[hash(k)] = v
 
@@ -104,8 +104,8 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     # Recover original multi-label format
     hash_to_label = {hash(label): label for label in set(y_combinations)}
     y_resampled = np.array([hash_to_label[h] for h in y_resampled_comb])
-    y_resampled_combinations = [tuple(label) for label in y_resampled]
-    print(Counter(y_resampled_combinations))
+    # y_resampled_combinations = [tuple(label) for label in y_resampled]
+    # print(Counter(y_resampled_combinations))
 
     # Reshape X_resampled back to 3D
     X_resampled = X_resampled.reshape(-1, seq_len, n_features)
@@ -169,7 +169,8 @@ def split_train_test_data(
         indices,
         test_size=0.2,
         random_state=random_seed,
-        stratify=None)
+        stratify=None,
+        shuffle=True)
 
     # Oversampling makes testing worse, need to revisit
     # X_train, y_train = multi_label_random_oversample(X_train, y_train, random_state=random_seed)
@@ -229,6 +230,8 @@ def train_model(train_loader: DataLoader,
             optimizer.step()
 
         if (epoch + 1) % 10 == 0:  # print loss every 10 epochs
+            # predict_probs, predicted_labels = eval_model(
+            # model, criterion, test_dataset)
             print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
     return model, criterion
@@ -297,7 +300,7 @@ if __name__ == "__main__":
 
     if MODEL_TYPE == ModelType.TORCH:
         model, criterion = train_model(train_loader,
-                                       epochs=200,
+                                       epochs=150,
                                        learning_rate=1e-4)
         total_params = sum(p.numel() for p in model.parameters())
         print("total # of model params: ", total_params)
@@ -306,13 +309,11 @@ if __name__ == "__main__":
 
     # Eval model performance
     if MODEL_TYPE == ModelType.TORCH:
-        predict_probs, predicted_labels, pr_table, dates_table = eval_model(
-            model, criterion, test_dataset, all_dates[idx_test])
+        predict_probs, predicted_labels = eval_model(model, criterion,
+                                                     test_dataset)
     else:
-        predict_probs, predicted_labels, pr_table, dates_table = eval_xgboost_model(
-            model, test_dataset, all_dates[idx_test])
-    print(pr_table)
-    # print(dates_table)
+        predict_probs, predicted_labels = eval_xgboost_model(
+            model, test_dataset)
 
     if MODEL_TYPE == ModelType.TORCH:
         torch.save(model.state_dict(), './model/model.pth')

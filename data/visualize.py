@@ -4,15 +4,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from data.data_fetcher import get_stock_df
+from data.label import label_feature
 
 
 def visualize_dataset(df: pd.DataFrame,
                       stock=None,
-                      viz_labels=["trend_30days+", "trend_30days-"],
+                      viz_label="trend_30days",
                       viz_pred=False,
                       plot_macd=True) -> None:
-    assert len(
-        viz_labels) == 2, "Only 2 labels are supported for visualization"
+    assert viz_label in label_feature, "label not found in label_feature"
     if stock:
         df = get_stock_df(df, stock)
         if df.shape[0] == 0:
@@ -21,55 +21,44 @@ def visualize_dataset(df: pd.DataFrame,
 
     # Plot candlestick chart with indicators
     scale = (df["High"].max() + df["High"].min()) / 2
-    pred_labels = [label + "_pred" for label in viz_labels]
 
-    df_labels = df[viz_labels].copy()
-    for i, label in enumerate(viz_labels):
-        df_labels[label] = df_labels[label] * scale * (1 + 0.1 * i)
-        df_labels[label] = df_labels[label].replace(0, np.nan)
-    # add prediction labels
-    if viz_pred:
-        for i, label in enumerate(pred_labels):
-            df_labels[label] = df[label]
-            df_labels[label] = df_labels[label] * scale * (0.8 + 0.1 * i)
-            df_labels[label] = df_labels[label].replace(0, np.nan)
+    df[viz_label + "+"] = np.where(df[viz_label] == 1, 1, np.nan) * scale
+    df[viz_label + "-"] = np.where(df[viz_label] == 2, 1, np.nan) * scale
 
     apds = [mpf.make_addplot(df[['MA_10', 'MA_20', 'MA_50']])]
     # Plot GT label
-    if df_labels[viz_labels[0]].count() > 0:
+    apds.append(
+        mpf.make_addplot(df[viz_label + "+"],
+                         scatter=True,
+                         marker="^",
+                         color="green",
+                         markersize=100))
+    apds.append(
+        mpf.make_addplot(df[viz_label + "-"],
+                         scatter=True,
+                         marker=">",
+                         color="red",
+                         markersize=100))
+    # Plot Predict label
+    if viz_pred:
+        pred_label = viz_label + "_pred"
+        df[pred_label +
+           "+"] = np.where(df[pred_label] == 1, 1, np.nan) * scale * 0.9
+        df[pred_label +
+           "-"] = np.where(df[pred_label] == 2, 1, np.nan) * scale * 0.9
+
         apds.append(
-            mpf.make_addplot(df_labels[viz_labels[0]],
+            mpf.make_addplot(df[pred_label + "+"],
                              scatter=True,
                              marker="^",
-                             color="green",
+                             color="blue",
                              markersize=100))
-    # Plot Predict label
-    if viz_pred:
-        if df_labels[pred_labels[0]].count() > 0:
-            apds.append(
-                mpf.make_addplot(df_labels[pred_labels[0]],
-                                 scatter=True,
-                                 marker="^",
-                                 color="blue",
-                                 markersize=100))
-
-    # Plot GT label
-    if df_labels[viz_labels[1]].count() > 0:
         apds.append(
-            mpf.make_addplot(df_labels[viz_labels[1]],
+            mpf.make_addplot(df[pred_label + "-"],
                              scatter=True,
                              marker=">",
-                             color="red",
+                             color="magenta",
                              markersize=100))
-    # Plot Predict label
-    if viz_pred:
-        if df_labels[pred_labels[1]].count() > 0:
-            apds.append(
-                mpf.make_addplot(df_labels[pred_labels[1]],
-                                 scatter=True,
-                                 marker=">",
-                                 color="magenta",
-                                 markersize=100))
 
     mpf.plot(df,
              type='candle',
@@ -115,7 +104,7 @@ if __name__ == "__main__":
     for stock in stocks:
         visualize_dataset(df_all,
                           stock=stock,
-                          viz_labels=["trend_30days+", "trend_30days-"],
+                          viz_label="trend_30days",
                           viz_pred=True,
                           plot_macd=False)
         plt.show()

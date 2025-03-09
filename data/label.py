@@ -4,18 +4,16 @@ from datetime import datetime, timedelta
 from itertools import chain
 
 # List of labels where the model is trained against and predicts at inference time
-time_windows = [10, 20, 30]  # number of next rows to consider
+time_windows = [10, 20, 30, 60]  # number of next rows to consider
 # classification labels for model to predict
-label_feature = list(
-    chain(*[[f"trend_{time}days+", f"trend_{time}days-"]
-            for time in time_windows]))
+label_feature = list(chain(*[[f"trend_{time}days"] for time in time_windows]))
 # all columns added for labeling purpose
 # [max_close, max_duration, min_close, min_duration, trend_Xdays+, trend_Xdays-]
 label_columns = list(
     chain(*[[
         f"{time}days_max_close", f"{time}days_max_duration",
         f"{time}days_min_close", f"{time}days_min_duration",
-        f"trend_{time}days+", f"trend_{time}days-"
+        f"trend_{time}days"
     ] for time in time_windows]))
 
 buy_sell_signals = [
@@ -136,11 +134,11 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                         return True
                     return False
 
-                up, down = 0, 0
+                trend = 0
                 if is_stock_trending_up(curr_close, max_close, max_index,
                                         min_close, min_index):
                     if any(buy_sell_signals_vals == 1):
-                        up = 1
+                        trend = 1  # 1 - trend up
                         # print(
                         #     f"Buy signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
@@ -153,7 +151,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                         # print(
                         #     f"Sell signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
-                        down = 1
+                        trend = 2  # 2 - trend down
                     # else:
                     # print(f"No indicator for sell signal", {curr_index.date().strftime('%Y-%m-%d')})
                     # print(f"Date: {curr_index}, Close: {curr_close}, <<<<<Down: Percent {(min_close - curr_close) / curr_close * 100}, Length {min_index - curr_index}")
@@ -161,7 +159,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     perc_change(curr_close, max_close),
                     days_diff(curr_index, max_index),
                     perc_change(curr_close, min_close),
-                    days_diff(curr_index, min_index), up, down
+                    days_diff(curr_index, min_index), trend
                 ]
             labels.loc[curr_index] = label
 

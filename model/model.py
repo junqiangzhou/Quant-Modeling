@@ -7,6 +7,7 @@ from sklearn.model_selection import GridSearchCV
 
 from model.utils import PositionalEncoding, AttentionPooling
 from data import label
+
 from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
@@ -245,7 +246,8 @@ class MultiTaskClassifier(nn.Module):
         self.ln2 = nn.LayerNorm(MULTI_TASK_DECODER_HIDDEN_DIM
                                 )  # Normalizes across feature dimensions
         self.dropout = nn.Dropout(p=0.1)  # 1% Dropout
-        self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM, 6)
+        self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
+                             3 * len(label.label_feature))
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
@@ -293,55 +295,23 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
-                                           3.0]).to(device)
-        # Add higher weight to positive class
-        positive_weights = torch.tensor([3.0]).to(device)
-        self.bce_loss = nn.BCEWithLogitsLoss(self.class_weights,
-                                             pos_weight=positive_weights)
+        # self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
+        #                                    3.0]).to(device)
+        # Add different weights to each class
+        weights = torch.tensor([1.0, 1.0, 1.0]).to(device)
+        self.ce_loss = nn.CrossEntropyLoss(weight=weights)
 
     def forward(self, logits, targets):
-        loss = self.bce_loss(logits, targets)
+        # logits shape: (batch_size, 3 * num_labels)
+        num_labels = len(label.label_feature)
+        batch_size = logits.shape[0]
+        logits = logits.reshape(batch_size * num_labels, 3)
 
-        # Negative labels for (+, -) are the same, so we can use contrastive loss
-        alpha = 1.0
-        for i in range(0, len(label.label_feature), 2):
-            # Extract logits for class 0 and class 1
-            logit_up = logits[:, i]
-            logit_down = logits[:, i + 1]
+        # targets shape: (batch_size, num_labels)
+        targets = targets.to(torch.long)
+        targets = targets.reshape(batch_size * num_labels)
 
-            # Mask: Only consider cases where both labels are negative (0)
-            mask = (targets[:, i] == 0) & (targets[:, i + 1] == 0)
-
-            # Contrastive loss: minimize L2 distance when both labels are negative
-            contrastive_loss = torch.mean(
-                (logit_up[mask] - logit_down[mask])**2) if mask.any() else 0.0
-
-            # Combine losses
-            loss += alpha * self.class_weights[i] * contrastive_loss
-
-        # Positive labels for (+, -) should not be the same, so add contrastive loss
-        margin = 0.5
-        for i in range(0, len(label.label_feature), 2):
-            # Extract logits for class 0 and class 1
-            logit_up = logits[:, i]
-            logit_down = logits[:, i + 1]
-
-            # Mask: Only consider cases where either label is positive (1)
-            mask = (targets[:, i] == 1) | (targets[:, i + 1] == 1)
-
-            # Compute distance between logit_up and logit_down
-            distance = torch.abs(
-                logit_up - logit_down
-            )  #F.pairwise_distance(logit_up.unsqueeze(1), logit_down.unsqueeze(1), p=2)
-
-            # Compute loss only for masked samples
-            contrastive_loss = torch.mean(
-                mask.float() *
-                F.relu(margin - distance))  # Ensuring minimum separation
-
-            # Combine losses
-            loss += alpha * self.class_weights[i] * contrastive_loss
+        loss = self.ce_loss(logits, targets)
 
         return loss
 
@@ -350,8 +320,9 @@ class XGBoostClassifier:
 
     def __init__(self, num_classes):
         self.num_classes = num_classes
-        xgb_model = xgb.XGBClassifier(objective='binary:logistic',
-                                      eval_metric='logloss',
+        xgb_model = xgb.XGBClassifier(objective='multi:softmax',
+                                      eval_metric='mlogloss',
+                                      num_class=3,
                                       use_label_encoder=False,
                                       verbosity=0)
         self.model = [xgb_model for _ in range(num_classes)]
@@ -387,15 +358,17 @@ class XGBoostClassifier:
     def predict(self, inputs):
 
         X_test = inputs[:, -1, :]  # Use only the last row for prediction
-        y_pred = None
+        y_preds, y_probs = None, None
         for i in range(self.num_classes):
             xgb_model = self.model[i]
-            y_pred_class = xgb_model.predict_proba(X_test)[:, 1]
-            if y_pred is None:
-                y_pred = y_pred_class
+            y_pred_class = xgb_model.predict(X_test)
+            y_pred_prob = xgb_model.predict_proba(X_test)
+            if y_preds is None:
+                y_preds, y_probs = y_pred_class, y_pred_prob
             else:
-                y_pred = np.column_stack((y_pred, y_pred_class))
-        return y_pred
+                y_preds = np.column_stack((y_preds, y_pred_class))
+                y_probs = np.column_stack((y_probs, y_pred_prob))
+        return y_preds, y_preds
 
 
 if __name__ == "__main__":
