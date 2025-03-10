@@ -1,5 +1,5 @@
 *.csv
-!prediction/*.csv
+!prediction/data/*.csv
 
 .DS_Store
 *.pth

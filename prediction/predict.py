@@ -14,7 +14,7 @@ import yfinance as yf
 import requests
 
 stock1, stocks2 = fetch_stocks()
-stocks = stock1 + stocks2
+stocks = list(set(stock1 + stocks2))
 
 # yahoo finance session
 session = requests.Session()
@@ -29,7 +29,8 @@ model.eval()
 # Initialize
 buy_names = [name + "+" for name in label_feature]
 sell_names = [name + "-" for name in label_feature]
-columns = buy_names + sell_names
+hold_names = [name + "0" for name in label_feature]
+columns = buy_names + sell_names + hold_names
 pred = np.zeros((len(stocks), len(columns)))
 
 for i, stock in enumerate(stocks):
@@ -64,15 +65,17 @@ for i, stock in enumerate(stocks):
         probs = torch.softmax(
             logits, dim=1).float().numpy()  # convert logits to probabilities
 
+        probs_hold = probs[:, 0]
         probs_buy = probs[:, 1]
         probs_sell = probs[:, 2]
-        pred[i, :] = np.concatenate([probs_buy, probs_sell])
+        pred[i, :] = np.concatenate([probs_buy, probs_sell, probs_hold])
 # Save results into a csv file
 df_pred = pd.DataFrame(pred, index=stocks, columns=columns)
-df_pred["buy_prob"] = df_pred[buy_names].mean(axis=1)
-df_pred["sell_prob"] = df_pred[sell_names].mean(axis=1)
-df_pred = df_pred.sort_values(by="buy_prob", ascending=False)
-df_pred.to_csv(f"./prediction/prediction_{last_date}.csv",
+df_pred["BUY"] = df_pred[buy_names].mean(axis=1)
+df_pred["SELL"] = df_pred[sell_names].mean(axis=1)
+df_pred["HOLD"] = df_pred[hold_names].mean(axis=1)
+df_pred = df_pred.sort_values(by="BUY", ascending=False)
+df_pred.to_csv(f"./prediction/data/prediction_{last_date}.csv",
                float_format="%.2f",
                index=True,
                index_label='stock')
