@@ -44,7 +44,7 @@ for i, stock in enumerate(stocks):
     try:
         df = download_data(stock, start_date, today, session=session)
         # Trim data within the interested time window
-        df = df.loc[start_date:today]
+        df = df.loc[start_date:]
         df.index = df.index.date
         df = one_hot_encoder(df)
     except:

@@ -100,8 +100,10 @@ def download_data(stock_symbol: str,
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
-
-    df = ticker.history(start=shifted_start_date, end=end_date, interval="1d")
+    end_date_inclusive = get_date_back(end_date, -1)
+    df = ticker.history(start=shifted_start_date,
+                        end=end_date_inclusive,
+                        interval="1d")
     market_cap = ticker.info["marketCap"]
     # eps = ticker.info["trailingEps"]
     # # Skip stocks with market cap less than 100 billion
@@ -129,12 +131,12 @@ def download_data(stock_symbol: str,
             f"Technical indicators not available for {stock_symbol}")
 
     # Trim data within the interested time window
-    df = df.loc[start_date:end_date]
+    df = df.loc[start_date:]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
     # df = add_detla_from_date(df, df.index[0])
 
-    df = add_earnings_data(df, ticker, start_date, end_date)
+    df = add_earnings_data(df, ticker, start_date, end_date_inclusive)
     # Add a column for stock symbol
     df["stock"] = stock_symbol
     return df
