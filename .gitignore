@@ -1,4 +1,6 @@
 *.csv
+!prediction/*.csv
+
 .DS_Store
 *.pth
 ./model/*.pth
