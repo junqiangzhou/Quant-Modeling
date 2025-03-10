@@ -17,11 +17,11 @@ label_columns = list(
     ] for time in time_windows]))
 
 buy_sell_signals = [
-    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
-    "MA_10_50_Crossover_Signal",  # "MA_20_50_Crossover_Signal", "MA_10_20_Crossover_Signal",
+    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal", 
+    "MA_10_50_Crossover_Signal",  # "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
     "MACD_Crossover_Signal",
     "RSI_Over_Bought_Signal",
-    "BB_Signal",  #"VWAP_Crossover_Signal"
+    "BB_Signal",  # "VWAP_Crossover_Signal"
 ]
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals
@@ -78,6 +78,8 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 "Close"].iloc[i]
             buy_sell_signals_vals = df_window.loc[curr_index,
                                                   buy_sell_signals].values
+            bullish_signal = df_window.loc[curr_index, "Price_Above_MA_5"]
+            bearish_signal = df_window.loc[curr_index, "Price_Below_MA_5"]
 
             # Skip 1st and last row as it's close to earnings date
             if i == 0 or i > len(df_window) - 6:
@@ -138,7 +140,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 trend = 0
                 if is_stock_trending_up(curr_close, max_close, max_index,
                                         min_close, min_index):
-                    if any(buy_sell_signals_vals == 1):
+                    if any(buy_sell_signals_vals == 1) and bullish_signal == 1:
                         trend = 1  # 1 - trend up
                         # print(
                         #     f"Buy signal, {curr_index.date().strftime('%Y-%m-%d')}"
@@ -148,7 +150,8 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     # print(f"Date: {curr_index}, Close: {curr_close}, >>>>>Up: Percent {(max_close - curr_close) / curr_close * 100}, Length {max_index - curr_index}")
                 elif is_stock_trending_down(curr_close, max_close, max_index,
                                             min_close, min_index):
-                    if any(buy_sell_signals_vals == -1):
+                    if any(buy_sell_signals_vals ==
+                           -1) and bearish_signal == 1:
                         # print(
                         #     f"Sell signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )

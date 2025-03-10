@@ -95,6 +95,10 @@ class BacktestSystem:
 
         buy_sell_signals_vals = self.stocks_data_pool[stock].loc[
             date, buy_sell_signals].values
+        bullish_signal = self.stocks_data_pool[stock].loc[date,
+                                                          "Price_Above_MA_5"]
+        bearish_signal = self.stocks_data_pool[stock].loc[date,
+                                                          "Price_Below_MA_5"]
         with torch.no_grad():
             logits = self.model(features_tensor)
             logits = logits.reshape(len(label_feature), 3)
@@ -107,7 +111,8 @@ class BacktestSystem:
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
-                    label_feature) and trend_up_indicators >= 1:
+                    label_feature
+            ) and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
 
             return False
@@ -117,7 +122,8 @@ class BacktestSystem:
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
-                    label_feature) and trend_down_indicators >= 1:
+                    label_feature
+            ) and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
 
             return False
@@ -182,8 +188,11 @@ if __name__ == "__main__":
     _, testing_stocks = fetch_stocks()
     # testing_stocks = random.sample(testing_stocks, 30)
     # testing_stocks = [
-    #     "TSLA"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
+    #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
     # ]
+    # debug_mode = True
+    # start_date = "2024-11-01"
+    # end_dates = ["2025-03-06"] # ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
     debug_mode = False
     start_date = "2015-01-01"
     end_dates = ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]

@@ -30,6 +30,8 @@ def eval_model(model, criterion, test_dataset):
     ]
     buy_features = test_dataset.X[:, -1, buy_columns]
     feature_has_buy = np.any(buy_features == 1, axis=1)
+    feature_bullish = test_dataset.X[:, -1,
+                                     feature_names.index("Price_Above_MA_5")]
 
     sell_signal_encoded = [signal + "_-1" for signal in buy_sell_signals]
     sell_columns = [
@@ -38,6 +40,8 @@ def eval_model(model, criterion, test_dataset):
     ]
     sell_features = test_dataset.X[:, -1, sell_columns]
     feature_has_sell = np.any(sell_features == 1, axis=1)
+    feature_bearish = test_dataset.X[:, -1,
+                                     feature_names.index("Price_Below_MA_5")]
 
     # Model Evaluation
     model.eval()
@@ -66,11 +70,14 @@ def eval_model(model, criterion, test_dataset):
                 logit,
                 dim=1).float().cpu().numpy()  # convert logits to probabilities
 
-            pred = np.argmax(prob, axis=1)  # binary predictions
+            pred = np.argmax(prob, axis=1)  # raw predictions
+            # Update predictions based on buy/sell signals
             for j in range(len(pred)):
-                if pred[j] == 1 and not feature_has_buy[j]:
+                if pred[j] == 1 and (not feature_has_buy[j]
+                                     or feature_bullish[j] != 1):
                     pred[j] = 0
-                elif pred[j] == 2 and not feature_has_sell[j]:
+                elif pred[j] == 2 and (not feature_has_sell[j]
+                                       or feature_bearish[j] != 1):
                     pred[j] = 0
 
             cm = confusion_matrix(target.squeeze().cpu().numpy(),

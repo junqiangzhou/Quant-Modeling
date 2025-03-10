@@ -8,7 +8,8 @@ import bisect
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_buy_sell_signals, add_trading_volume)
+                            add_buy_sell_signals, add_trading_volume,
+                            add_bullish_bearish_pattern)
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 from config.config import random_seed, look_back_window
@@ -118,6 +119,7 @@ def download_data(stock_symbol: str,
         df = add_bollinger_bands(df)
         df = add_atr(df)
         df = add_buy_sell_signals(df)
+        df = add_bullish_bearish_pattern(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")

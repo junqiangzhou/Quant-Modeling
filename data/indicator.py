@@ -146,6 +146,14 @@ def add_atr(df, atr_window=14):
     return df
 
 
+def add_bullish_bearish_pattern(df):
+    df['Price_Above_MA_5'] = 0
+    df.loc[df["Close"] > df["MA_5"], 'Price_Above_MA_5'] = 1
+    df['Price_Below_MA_5'] = 0
+    df.loc[df["Close"] < df["MA_5"], 'Price_Below_MA_5'] = 1
+    return df
+
+
 def add_buy_sell_signals(df):
     # shift df by 1 row so we can compare with prev day
     df_shift = df.shift(1)
