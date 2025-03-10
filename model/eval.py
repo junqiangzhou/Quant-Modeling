@@ -71,14 +71,16 @@ def eval_model(model, criterion, test_dataset):
                 dim=1).float().cpu().numpy()  # convert logits to probabilities
 
             pred = np.argmax(prob, axis=1)  # raw predictions
-            # Update predictions based on buy/sell signals
-            for j in range(len(pred)):
-                if pred[j] == 1 and (not feature_has_buy[j]
-                                     or feature_bullish[j] != 1):
-                    pred[j] = 0
-                elif pred[j] == 2 and (not feature_has_sell[j]
-                                       or feature_bearish[j] != 1):
-                    pred[j] = 0
+            feature_mask = False
+            if feature_mask:
+                # Update predictions based on buy/sell signals
+                for j in range(len(pred)):
+                    if pred[j] == 1 and (not feature_has_buy[j]
+                                         or feature_bullish[j] != 1):
+                        pred[j] = 0
+                    elif pred[j] == 2 and (not feature_has_sell[j]
+                                           or feature_bearish[j] != 1):
+                        pred[j] = 0
 
             cm = confusion_matrix(target.squeeze().cpu().numpy(),
                                   pred,

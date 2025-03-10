@@ -17,8 +17,15 @@ kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 rsi_feature = ["RSI_14"]
 buy_sell_signals_encoded = label.buy_sell_signals_encoded
 bullish_bearish_signals = ["Price_Above_MA_5", "Price_Below_MA_5"]
-feature_names = [name + "_diff" for name in base_feature
-                 ] + buy_sell_signals_encoded + bullish_bearish_signals
+# Other crossover signals that are not in buy_sell_signals
+other_crossover_signals = [
+    "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
+    "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
+    "VWAP_Crossover_Signal"
+]
+feature_names = [
+    name + "_diff" for name in base_feature
+] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals
 
 
 def normalize_features(features):
