@@ -91,8 +91,12 @@ def get_date_back(date_str: str, delta_days: int) -> str:
 def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
-                  windows=[5, 10, 20, 50]) -> pd.DataFrame:
-    ticker = Ticker(stock_symbol)
+                  windows=[5, 10, 20, 50],
+                  session=None) -> pd.DataFrame:
+    if session is None:
+        ticker = Ticker(stock_symbol)
+    else:
+        ticker = Ticker(stock_symbol, session=session)
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)

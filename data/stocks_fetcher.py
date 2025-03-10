@@ -34,7 +34,7 @@ def fetch_stocks():
     train_stocks, test_stocks = all_symbols[:train_size], all_symbols[
         train_size:]
 
-    test_stocks = MAG7
+    # test_stocks = MAG7
 
     # train_stocks, test_stocks = MAG7, TEST_GROUP
     print(f"# of stocks for training: {len(train_stocks)}")
