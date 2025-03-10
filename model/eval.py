@@ -15,7 +15,7 @@ from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from data import label
 from model.model import PredictionModel, CustomLoss
 from config.config import ENCODER_TYPE, device, random_seed, look_back_window
-from data.stocks_fetcher import fetch_stocks
+from data.stocks_fetcher import MAG7
 
 label_names = label.label_feature
 buy_sell_signals = label.buy_sell_signals
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     # shift the start date back to get more data for history features
     shifted_start_date = get_date_back(start_date, look_back_window + 20)
-    _, testing_stocks = fetch_stocks()
+    testing_stocks = MAG7
 
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []

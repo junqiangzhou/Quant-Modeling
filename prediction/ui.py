@@ -52,12 +52,12 @@ app = dash.Dash(__name__)
 
 app.layout = html.Div([
     html.H1(f"Stocks Recommendation Dashboard - {date}"),
-    html.H3("Top 100 Buys"),
+    html.H3("Top Buys"),
     dash_table.DataTable(id="table_buy",
                          page_size=10,
                          style_cell=style_cell,
                          style_table=style_table),
-    html.H3("Top 100 Sells"),
+    html.H3("Top Sells"),
     dash_table.DataTable(id="table_sell",
                          page_size=10,
                          style_cell=style_cell,

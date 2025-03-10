@@ -72,6 +72,7 @@ class TransformerEncoder(nn.Module):
     def forward(self, x):
         x = x.float()  # x shape: (batch_size, seq_len, input_dim)
         # batch_size = x.shape[0]
+        seq_len = x.shape[1]
 
         # Project input
         x = self.input_proj(x)  # (batch_size, seq_len, latent_dim)
@@ -80,9 +81,16 @@ class TransformerEncoder(nn.Module):
         # Add positional encoding
         x = self.pos_encoder(x)
 
+        # Create causal mask (upper triangular mask with boolean dtype)
+        causal_mask = torch.triu(torch.ones(seq_len,
+                                            seq_len,
+                                            dtype=torch.bool,
+                                            device=x.device),
+                                 diagonal=1)
+
         # Pass through transformer encoder
         memory = self.transformer_encoder(
-            x)  # (batch_size, seq_len,  latent_dim)
+            x, mask=causal_mask)  # (batch_size, seq_len,  latent_dim)
 
         # Output projection - Aggregate over sequence dimension
         output = self.output_proj(

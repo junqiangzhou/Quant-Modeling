@@ -1,6 +1,6 @@
 from data.data_fetcher import download_data, get_date_back
 from data.label import one_hot_encoder, label_feature, buy_sell_signals
-from data.stocks_fetcher import fetch_stocks
+from data.stocks_fetcher import MAG7
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
@@ -185,8 +185,7 @@ class BacktestSystem:
 
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
-    _, testing_stocks = fetch_stocks()
-    # testing_stocks = random.sample(testing_stocks, 30)
+    testing_stocks = MAG7
     # testing_stocks = [
     #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
     # ]
