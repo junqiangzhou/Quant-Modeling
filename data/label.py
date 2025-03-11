@@ -58,8 +58,8 @@ def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
 # 3. Positive label: If min_price > curr_price or (max_price > curr_price * 1.1 and max_price comes before min_price)
 # 4. Negative label: If max_price < curr_price or (min_price < curr_price * 0.92 and min_price comes before max_price)
 def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
-    up_perc_threshold = 0.1  # >= 10% is up
-    down_perc_threshold = -0.08  # <= 8% is down
+    up_perc_threshold = 0.05  # >= 10% is up
+    down_perc_threshold = -0.04  # <= 8% is down
 
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
