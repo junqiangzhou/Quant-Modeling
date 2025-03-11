@@ -4,26 +4,24 @@ from datetime import datetime, timedelta
 from itertools import chain
 
 # List of labels where the model is trained against and predicts at inference time
-time_windows = [10, 20, 30]  # number of next rows to consider
+time_windows = [5, 10, 20, 30]  # number of next rows to consider
 # classification labels for model to predict
-label_feature = list(
-    chain(*[[f"trend_{time}days+", f"trend_{time}days-"]
-            for time in time_windows]))
+label_feature = list(chain(*[[f"trend_{time}days"] for time in time_windows]))
 # all columns added for labeling purpose
 # [max_close, max_duration, min_close, min_duration, trend_Xdays+, trend_Xdays-]
 label_columns = list(
     chain(*[[
         f"{time}days_max_close", f"{time}days_max_duration",
         f"{time}days_min_close", f"{time}days_min_duration",
-        f"trend_{time}days+", f"trend_{time}days-"
+        f"trend_{time}days"
     ] for time in time_windows]))
 
 buy_sell_signals = [
-    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
-    "MA_10_50_Crossover_Signal",  # "MA_20_50_Crossover_Signal", "MA_10_20_Crossover_Signal",
+    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal", 
+    "MA_10_50_Crossover_Signal",  # "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
     "MACD_Crossover_Signal",
     "RSI_Over_Bought_Signal",
-    "BB_Signal",  #"VWAP_Crossover_Signal"
+    "BB_Signal",  # "VWAP_Crossover_Signal"
 ]
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals
@@ -41,15 +39,16 @@ def days_diff(date1, date2):
 
 def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
     # one-hot encoding on buy_sell_signals
-    df = pd.get_dummies(df,
-                        columns=buy_sell_signals,
-                        prefix={col: col
-                                for col in buy_sell_signals})
+    df_dummies = pd.get_dummies(df,
+                                columns=buy_sell_signals,
+                                prefix={col: col
+                                        for col in buy_sell_signals})
     # Fill missing category with 0s.
     for col in buy_sell_signals_encoded:
-        if col not in df.columns:
-            df[col] = 0
+        if col not in df_dummies.columns:
+            df_dummies[col] = 0
 
+    df = df.join(df_dummies[buy_sell_signals_encoded])
     return df
 
 
@@ -59,8 +58,8 @@ def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
 # 3. Positive label: If min_price > curr_price or (max_price > curr_price * 1.1 and max_price comes before min_price)
 # 4. Negative label: If max_price < curr_price or (min_price < curr_price * 0.92 and min_price comes before max_price)
 def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
-    up_perc_threshold = 0.1  # >= 10% is up
-    down_perc_threshold = -0.08  # <= 8% is down
+    up_perc_threshold = 0.05  # >= 10% is up
+    down_perc_threshold = -0.04  # <= 8% is down
 
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
@@ -79,6 +78,8 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 "Close"].iloc[i]
             buy_sell_signals_vals = df_window.loc[curr_index,
                                                   buy_sell_signals].values
+            bullish_signal = df_window.loc[curr_index, "Price_Above_MA_5"]
+            bearish_signal = df_window.loc[curr_index, "Price_Below_MA_5"]
 
             # Skip 1st and last row as it's close to earnings date
             if i == 0 or i > len(df_window) - 6:
@@ -136,11 +137,11 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                         return True
                     return False
 
-                up, down = 0, 0
+                trend = 0
                 if is_stock_trending_up(curr_close, max_close, max_index,
                                         min_close, min_index):
-                    if any(buy_sell_signals_vals == 1):
-                        up = 1
+                    if any(buy_sell_signals_vals == 1) and bullish_signal == 1:
+                        trend = 1  # 1 - trend up
                         # print(
                         #     f"Buy signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
@@ -149,11 +150,12 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     # print(f"Date: {curr_index}, Close: {curr_close}, >>>>>Up: Percent {(max_close - curr_close) / curr_close * 100}, Length {max_index - curr_index}")
                 elif is_stock_trending_down(curr_close, max_close, max_index,
                                             min_close, min_index):
-                    if any(buy_sell_signals_vals == -1):
+                    if any(buy_sell_signals_vals ==
+                           -1) and bearish_signal == 1:
                         # print(
                         #     f"Sell signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
-                        down = 1
+                        trend = 2  # 2 - trend down
                     # else:
                     # print(f"No indicator for sell signal", {curr_index.date().strftime('%Y-%m-%d')})
                     # print(f"Date: {curr_index}, Close: {curr_close}, <<<<<Down: Percent {(min_close - curr_close) / curr_close * 100}, Length {min_index - curr_index}")
@@ -161,7 +163,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     perc_change(curr_close, max_close),
                     days_diff(curr_index, max_index),
                     perc_change(curr_close, min_close),
-                    days_diff(curr_index, min_index), up, down
+                    days_diff(curr_index, min_index), trend
                 ]
             labels.loc[curr_index] = label
 

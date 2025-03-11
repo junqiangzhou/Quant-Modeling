@@ -7,35 +7,48 @@ import numpy as np
 import random
 import bisect
 from datetime import datetime
+from sklearn.metrics import confusion_matrix
 
 from data.data_fetcher import get_stock_df, create_dataset_with_labels, get_date_back
-from feature.feature import create_batch_feature
+from feature.feature import create_batch_feature, feature_names
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from data import label
 from model.model import PredictionModel, CustomLoss
 from config.config import ENCODER_TYPE, device, random_seed, look_back_window
-from data.stocks_fetcher import fetch_stocks
+from data.stocks_fetcher import MAG7
 
 label_names = label.label_feature
+buy_sell_signals = label.buy_sell_signals
 
 
-def eval_model(model, criterion, test_dataset, test_dates):
+def eval_model(model, criterion, test_dataset):
+
+    # Check buy/sell signals from features
+    buy_signal_encoded = [signal + "_1" for signal in buy_sell_signals]
+    buy_columns = [
+        i for i, name in enumerate(feature_names) if name in buy_signal_encoded
+    ]
+    buy_features = test_dataset.X[:, -1, buy_columns]
+    feature_has_buy = np.any(buy_features == 1, axis=1)
+    feature_bullish = test_dataset.X[:, -1,
+                                     feature_names.index("Price_Above_MA_5")]
+
+    sell_signal_encoded = [signal + "_-1" for signal in buy_sell_signals]
+    sell_columns = [
+        i for i, name in enumerate(feature_names)
+        if name in sell_signal_encoded
+    ]
+    sell_features = test_dataset.X[:, -1, sell_columns]
+    feature_has_sell = np.any(sell_features == 1, axis=1)
+    feature_bearish = test_dataset.X[:, -1,
+                                     feature_names.index("Price_Below_MA_5")]
+
     # Model Evaluation
     model.eval()
     with torch.no_grad():
-        # m, n = labels.shape
-        metrics = ["TP", "FP", "FN"]
-        n = len(label_names)
-
-        names_metrics = [
-            metric + name
-            for metric, name in list(itertools.product(label_names, metrics))
-        ]
-        stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
-        stats_date = {name: [] for name in names_metrics}
-
         inputs = torch.from_numpy(test_dataset.X).to(device)
         targets = torch.from_numpy(test_dataset.y).to(device)
+
         # Check input data
         check_nan_in_tensor(inputs)
         check_nan_in_tensor(targets)
@@ -47,65 +60,44 @@ def eval_model(model, criterion, test_dataset, test_dates):
         loss = criterion(logits, targets)
         print(f"Test Loss: {loss.item():.4f}")
 
-        probs = torch.sigmoid(
-            logits).float().cpu().numpy()  # convert logits to probabilities
-        preds = probs > 0.6  # binary predictions
+        logits = logits.reshape(targets.shape[0], len(label_names), 3)
+        probs, preds = None, None
+        for i, label_name in enumerate(label_names):
+            logit = logits[:, i, :]
+            target = targets[:, i]
 
-        for col in range(n):
-            for row in range(targets.shape[0]):
-                if targets[row, col] == 1 and preds[row, col] == 1:
-                    stats_count[col]["TP"] += 1
-                    stats_date[label_names[col] + "TP"].append(test_dates[row])
-                elif targets[row, col] == 0 and preds[row, col] == 1:
-                    stats_count[col]["FP"] += 1
-                    stats_date[label_names[col] + "FP"].append(test_dates[row])
-                elif targets[row, col] == 1 and preds[row, col] == 0:
-                    stats_count[col]["FN"] += 1
-                    stats_date[label_names[col] + "FN"].append(test_dates[row])
-            stats_date[label_names[col] + "TP"].sort()
-            stats_date[label_names[col] + "FP"].sort()
-            stats_date[label_names[col] + "FN"].sort()
+            prob = torch.softmax(
+                logit,
+                dim=1).float().cpu().numpy()  # convert logits to probabilities
 
-            # print(f"{label_names[col]} TP count: {stats_count[col]['TP']}")
-            # print(f"{label_names[col]} FP count: {stats_count[col]['FP']}")
-            # print(f"{label_names[col]} FN count: {stats_count[col]['FN']}")
+            pred = np.argmax(prob, axis=1)  # raw predictions
+            feature_mask = False
+            if feature_mask:
+                # Update predictions based on buy/sell signals
+                for j in range(len(pred)):
+                    if pred[j] == 1 and (not feature_has_buy[j]
+                                         or feature_bullish[j] != 1):
+                        pred[j] = 0
+                    elif pred[j] == 2 and (not feature_has_sell[j]
+                                           or feature_bearish[j] != 1):
+                        pred[j] = 0
 
-    # calculate precision and recall metrics
-    pr = [[0.0] * n, [0.0] * n]
-    for col in range(n):
-        if stats_count[col]["TP"] + stats_count[col]["FP"] > 0:
-            pr[0][col] = stats_count[col]["TP"] / float(
-                stats_count[col]["TP"] + stats_count[col]["FP"])
-        if stats_count[col]["TP"] + stats_count[col]["FN"] > 0:
-            pr[1][col] = stats_count[col]["TP"] / float(
-                stats_count[col]["TP"] + stats_count[col]["FN"])
-    pr_table = pd.DataFrame(data=pr,
-                            index=["Precision", "Recall"],
-                            columns=label_names)
+            cm = confusion_matrix(target.squeeze().cpu().numpy(),
+                                  pred,
+                                  normalize='true')
+            print(f"{label_name} Confusion Matrix: \n {cm}")
 
-    # Find the length of the longest sublist
-    max_rows = max([len(value) for value in stats_date.values()])
-    padded_array = np.array([
-        dates + [None] * (max_rows - len(dates))
-        for dates in stats_date.values()
-    ]).transpose()
-    dates_table = pd.DataFrame(data=padded_array, columns=names_metrics)
-    return probs, preds, pr_table, dates_table
+            if probs is None:
+                probs, preds = prob, pred
+            else:
+                probs = np.column_stack((probs, prob))
+                preds = np.column_stack((preds, pred))
+
+    return probs, preds
 
 
-def eval_xgboost_model(model, test_dataset, test_dates):
+def eval_xgboost_model(model, test_dataset):
     # Model Evaluation
-
-    # m, n = labels.shape
-    metrics = ["TP", "FP", "FN"]
-    n = len(label_names)
-
-    names_metrics = [
-        metric + name
-        for metric, name in list(itertools.product(label_names, metrics))
-    ]
-    stats_count = [{metric: 0 for metric in metrics} for _ in range(n)]
-    stats_date = {name: [] for name in names_metrics}
 
     inputs = test_dataset.X
     targets = test_dataset.y
@@ -114,51 +106,17 @@ def eval_xgboost_model(model, test_dataset, test_dates):
     # check_nan_in_tensor(targets)
 
     # Check model prediction
-    probs = model.predict(inputs)
+    preds, probs = model.predict(inputs)
     # check_nan_in_tensor(probs)
 
-    preds = probs > 0.6  # binary predictions
+    for i, label_name in enumerate(label_names):
+        pred = preds[:, i]
+        target = targets[:, i]
 
-    for col in range(n):
-        for row in range(targets.shape[0]):
-            if targets[row, col] == 1 and preds[row, col] == 1:
-                stats_count[col]["TP"] += 1
-                stats_date[label_names[col] + "TP"].append(test_dates[row])
-            elif targets[row, col] == 0 and preds[row, col] == 1:
-                stats_count[col]["FP"] += 1
-                stats_date[label_names[col] + "FP"].append(test_dates[row])
-            elif targets[row, col] == 1 and preds[row, col] == 0:
-                stats_count[col]["FN"] += 1
-                stats_date[label_names[col] + "FN"].append(test_dates[row])
-        stats_date[label_names[col] + "TP"].sort()
-        stats_date[label_names[col] + "FP"].sort()
-        stats_date[label_names[col] + "FN"].sort()
+        cm = confusion_matrix(target.squeeze(), pred, normalize='true')
+        print(f"{label_name} Confusion Matrix: \n {cm}")
 
-        # print(f"{label_names[col]} TP count: {stats_count[col]['TP']}")
-        # print(f"{label_names[col]} FP count: {stats_count[col]['FP']}")
-        # print(f"{label_names[col]} FN count: {stats_count[col]['FN']}")
-
-    # calculate precision and recall metrics
-    pr = [[0.0] * n, [0.0] * n]
-    for col in range(n):
-        if stats_count[col]["TP"] + stats_count[col]["FP"] > 0:
-            pr[0][col] = stats_count[col]["TP"] / float(
-                stats_count[col]["TP"] + stats_count[col]["FP"])
-        if stats_count[col]["TP"] + stats_count[col]["FN"] > 0:
-            pr[1][col] = stats_count[col]["TP"] / float(
-                stats_count[col]["TP"] + stats_count[col]["FN"])
-    pr_table = pd.DataFrame(data=pr,
-                            index=["Precision", "Recall"],
-                            columns=label_names)
-
-    # Find the length of the longest sublist
-    max_rows = max([len(value) for value in stats_date.values()])
-    padded_array = np.array([
-        dates + [None] * (max_rows - len(dates))
-        for dates in stats_date.values()
-    ]).transpose()
-    dates_table = pd.DataFrame(data=padded_array, columns=names_metrics)
-    return probs, preds, pr_table, dates_table
+    return probs, preds
 
 
 if __name__ == "__main__":
@@ -167,7 +125,7 @@ if __name__ == "__main__":
 
     # shift the start date back to get more data for history features
     shifted_start_date = get_date_back(start_date, look_back_window + 20)
-    _, testing_stocks = fetch_stocks()
+    testing_stocks = MAG7
 
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []
@@ -215,13 +173,12 @@ if __name__ == "__main__":
     model.eval()
     criterion = CustomLoss()
 
-    predict_probs, predict_labels, pr_table, dates_table = eval_model(
-        model, criterion, test_dataset, all_dates)
-    print(pr_table)
-    # print(dates_table)
+    predict_probs, predict_labels = eval_model(model, criterion, test_dataset)
 
     pred_label_names = [label + "_pred" for label in label_names]
-    prob_label_names = [label + "_prob" for label in label_names]
+    prob_label_names = [
+        label + str(i) + "_prob" for label in label_names for i in range(3)
+    ]
     count = 0
     df_all = None
     for i, df in enumerate(df_all_list):

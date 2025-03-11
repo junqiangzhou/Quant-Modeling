@@ -1,6 +1,6 @@
 from data.data_fetcher import download_data, get_date_back
-from data.label import one_hot_encoder
-from data.stocks_fetcher import fetch_stocks
+from data.label import one_hot_encoder, label_feature, buy_sell_signals
+from data.stocks_fetcher import MAG7
 from feature.feature import look_back_window, feature_names
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
@@ -93,26 +93,37 @@ class BacktestSystem:
         else:
             features_tensor = torch.tensor(features, dtype=torch.float32)
 
+        buy_sell_signals_vals = self.stocks_data_pool[stock].loc[
+            date, buy_sell_signals].values
+        bullish_signal = self.stocks_data_pool[stock].loc[date,
+                                                          "Price_Above_MA_5"]
+        bearish_signal = self.stocks_data_pool[stock].loc[date,
+                                                          "Price_Below_MA_5"]
         with torch.no_grad():
             logits = self.model(features_tensor)
-            probs = torch.sigmoid(
-                logits).float().numpy()  # convert logits to probabilities
+            logits = logits.reshape(len(label_feature), 3)
+            probs = torch.softmax(
+                logits,
+                dim=1).float().numpy()  # convert logits to probabilities
 
         def should_buy(probs: NDArray) -> bool:
-            trend_up_probs = probs[0, ::2]
-            # trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
-
-            if min(trend_up_probs) >= 0.6:  # and trend_up_probs[-1] >= 0.5:
+            pred = np.argmax(probs, axis=1)
+            trend_up_labels = np.sum(pred == 1)
+            trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
+            if trend_up_labels == len(
+                    label_feature
+            ) and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
 
             return False
 
         def should_sell(probs: NDArray) -> bool:
-            # trend_up_probs = probs[0, ::2]
-            trend_down_probs = probs[0, 1:probs.shape[1] + 1:2]
-
-            if min(trend_down_probs
-                   ) >= 0.6:  # and trend_down_probs[-1] >= 0.5:
+            pred = np.argmax(probs, axis=1)
+            trend_down_labels = np.sum(pred == 2)
+            trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
+            if trend_down_labels == len(
+                    label_feature
+            ) and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
 
             return False
@@ -174,16 +185,16 @@ class BacktestSystem:
 
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
-    _, testing_stocks = fetch_stocks()
-    # testing_stocks = random.sample(testing_stocks, 30)
+    testing_stocks = MAG7
     # testing_stocks = [
-    #     "TSLA"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
+    #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
     # ]
+    # debug_mode = True
+    # start_date = "2024-11-01"
+    # end_dates = ["2025-03-06"] # ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
     debug_mode = False
     start_date = "2015-01-01"
-    end_dates = [
-        "2015-12-31", "2016-12-31", "2018-12-31", "2018-12-31", "2020-12-31"
-    ]
+    end_dates = ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
 
     for end_date in end_dates:
         testing = BacktestSystem(testing_stocks, start_date, end_date)

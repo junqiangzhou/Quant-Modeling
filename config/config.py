@@ -18,6 +18,6 @@ random_seed = 42
 look_back_window = 30
 
 ENCODER_TYPE = EncoderType.Transformer
-MODEL_TYPE = ModelType.XGBOOST
+MODEL_TYPE = ModelType.TORCH
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

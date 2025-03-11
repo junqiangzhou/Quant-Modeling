@@ -1,4 +1,7 @@
 *.csv
+!prediction/data/*.csv
+
 .DS_Store
 *.pth
 ./model/*.pth
+*/__pycache__/*

@@ -3,6 +3,11 @@ from yahoo_fin import stock_info as si
 import random
 
 MAG7 = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NVDA"]
+ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
+BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
+PICKS = [
+    "NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "XYZ"
+]
 TEST_GROUP = ["NFLX", "BABA", "TSM", "JPM", "V"]
 
 
@@ -12,7 +17,7 @@ def fetch_stocks():
     # Read the tables on the webpage
     tables = pd.read_html(url)
     # The first table on the page contains the NASDAQ-100 components
-    nasdaq_100_symbols = tables[4]["Symbol"].tolist()
+    nasdaq_100_symbols = tables[4]["Ticker"].tolist()
 
     # print(f"NASDAQ-100 symbols ({len(nasdaq_100_symbols)}):", nasdaq_100_symbols)
 
@@ -25,7 +30,7 @@ def fetch_stocks():
 
     # Combine and remove duplicates
     all_symbols = list(set(sp500_symbols + nasdaq_100_symbols))
-    all_symbols = sorted(all_symbols)[:60]
+    all_symbols = sorted(all_symbols)
     print(f"Total unique symbols: {len(all_symbols)}")
     random.seed(42)
     random.shuffle(all_symbols)
@@ -34,7 +39,7 @@ def fetch_stocks():
     train_stocks, test_stocks = all_symbols[:train_size], all_symbols[
         train_size:]
 
-    test_stocks = MAG7
+    test_stocks += ETF + BOND + PICKS
 
     # train_stocks, test_stocks = MAG7, TEST_GROUP
     print(f"# of stocks for training: {len(train_stocks)}")

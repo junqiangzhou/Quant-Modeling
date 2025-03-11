@@ -8,7 +8,8 @@ import bisect
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_buy_sell_signals, add_trading_volume)
+                            add_buy_sell_signals, add_trading_volume,
+                            add_bullish_bearish_pattern)
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
 from config.config import random_seed, look_back_window
@@ -90,13 +91,19 @@ def get_date_back(date_str: str, delta_days: int) -> str:
 def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
-                  windows=[5, 10, 20, 50]) -> pd.DataFrame:
-    ticker = Ticker(stock_symbol)
+                  windows=[5, 10, 20, 50],
+                  session=None) -> pd.DataFrame:
+    if session is None:
+        ticker = Ticker(stock_symbol)
+    else:
+        ticker = Ticker(stock_symbol, session=session)
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
-
-    df = ticker.history(start=shifted_start_date, end=end_date, interval="1d")
+    end_date_inclusive = get_date_back(end_date, -1)
+    df = ticker.history(start=shifted_start_date,
+                        end=end_date_inclusive,
+                        interval="1d")
     market_cap = ticker.info["marketCap"]
     # eps = ticker.info["trailingEps"]
     # # Skip stocks with market cap less than 100 billion
@@ -118,17 +125,18 @@ def download_data(stock_symbol: str,
         df = add_bollinger_bands(df)
         df = add_atr(df)
         df = add_buy_sell_signals(df)
+        df = add_bullish_bearish_pattern(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")
 
     # Trim data within the interested time window
-    df = df.loc[start_date:end_date]
+    df = df.loc[start_date:]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
     # df = add_detla_from_date(df, df.index[0])
 
-    df = add_earnings_data(df, ticker, start_date, end_date)
+    df = add_earnings_data(df, ticker, start_date, end_date_inclusive)
     # Add a column for stock symbol
     df["stock"] = stock_symbol
     return df
