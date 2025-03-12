@@ -1,10 +1,11 @@
+from config.config import label_feature
+from data.stocks_fetcher import MAG7, ETF, BOND, PICKS, CHINA
+
 import dash
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 import pandas as pd
 import glob
-from data.label import label_feature
-from data.stocks_fetcher import MAG7, ETF, BOND, PICKS, CHINA
 
 buy_names = [name + "+" for name in label_feature]
 sell_names = [name + "-" for name in label_feature]

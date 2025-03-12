@@ -1,24 +1,15 @@
-import sys
-import os
-import itertools
+from data.data_fetcher import create_dataset_with_labels, get_date_back
+from feature.feature import create_batch_feature
+from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
+from model.model import PredictionModel, CustomLoss
+from config.config import (ENCODER_TYPE, device, look_back_window,
+                           label_feature, buy_sell_signals, feature_names)
+from data.stocks_fetcher import MAG7
+
 import torch
 import pandas as pd
 import numpy as np
-import random
-import bisect
-from datetime import datetime
 from sklearn.metrics import confusion_matrix
-
-from data.data_fetcher import get_stock_df, create_dataset_with_labels, get_date_back
-from feature.feature import create_batch_feature, feature_names
-from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
-from data import label
-from model.model import PredictionModel, CustomLoss
-from config.config import ENCODER_TYPE, device, random_seed, look_back_window
-from data.stocks_fetcher import MAG7
-
-label_names = label.label_feature
-buy_sell_signals = label.buy_sell_signals
 
 
 def eval_model(model, criterion, test_dataset):
@@ -60,9 +51,9 @@ def eval_model(model, criterion, test_dataset):
         loss = criterion(logits, targets)
         print(f"Test Loss: {loss.item():.4f}")
 
-        logits = logits.reshape(targets.shape[0], len(label_names), 3)
+        logits = logits.reshape(targets.shape[0], len(label_feature), 3)
         probs, preds = None, None
-        for i, label_name in enumerate(label_names):
+        for i, label_name in enumerate(label_feature):
             logit = logits[:, i, :]
             target = targets[:, i]
 
@@ -109,7 +100,7 @@ def eval_xgboost_model(model, test_dataset):
     preds, probs = model.predict(inputs)
     # check_nan_in_tensor(probs)
 
-    for i, label_name in enumerate(label_names):
+    for i, label_name in enumerate(label_feature):
         pred = preds[:, i]
         target = targets[:, i]
 
@@ -175,9 +166,9 @@ if __name__ == "__main__":
 
     predict_probs, predict_labels = eval_model(model, criterion, test_dataset)
 
-    pred_label_names = [label + "_pred" for label in label_names]
+    pred_label_names = [label + "_pred" for label in label_feature]
     prob_label_names = [
-        label + str(i) + "_prob" for label in label_names for i in range(3)
+        label + str(i) + "_prob" for label in label_feature for i in range(3)
     ]
     count = 0
     df_all = None

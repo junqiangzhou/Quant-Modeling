@@ -1,10 +1,11 @@
+from data.data_fetcher import get_stock_df
+from config.config import label_feature
+
 import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from data.data_fetcher import get_stock_df
-from data.label import label_feature
 
 
 def visualize_dataset(df: pd.DataFrame,

@@ -1,14 +1,12 @@
+from model.utils import PositionalEncoding, AttentionPooling
+from config.config import EncoderType, device, label_feature
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import xgboost as xgb
 import numpy as np
 from sklearn.model_selection import GridSearchCV
-
-from model.utils import PositionalEncoding, AttentionPooling
-from data import label
-
-from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 256
@@ -255,7 +253,7 @@ class MultiTaskClassifier(nn.Module):
                                 )  # Normalizes across feature dimensions
         self.dropout = nn.Dropout(p=0.1)  # 10% Dropout
         self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
-                             3 * len(label.label_feature))
+                             3 * len(label_feature))
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
@@ -311,7 +309,7 @@ class CustomLoss(nn.Module):
 
     def forward(self, logits, targets):
         # logits shape: (batch_size, 3 * num_labels)
-        num_labels = len(label.label_feature)
+        num_labels = len(label_feature)
         batch_size = logits.shape[0]
         logits = logits.reshape(batch_size * num_labels, 3)
 

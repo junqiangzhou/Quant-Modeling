@@ -1,9 +1,7 @@
 import pandas as pd
 from yfinance import Ticker
 # from yahoo_fin import stock_info as si
-import numpy as np
 import random
-import bisect
 
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
@@ -12,20 +10,7 @@ from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_bullish_bearish_pattern)
 from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
-from config.config import random_seed, look_back_window
-
-# List of basic data downloaded from Yahoo Finance
-base_feature = [
-    'Open',
-    'High',
-    'Low',
-    'Close',
-    'Volume',
-    'MA_5',
-    'MA_10',
-    'MA_20',
-    'MA_50',  # 'Trading_Volume'
-]
+from config.config import random_seed, base_feature
 
 
 def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:

@@ -1,32 +1,9 @@
+from config.config import (future_time_windows, label_columns,
+                           buy_sell_signals, buy_sell_signals_encoded)
+
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from itertools import chain
-
-# List of labels where the model is trained against and predicts at inference time
-time_windows = [5, 10, 20, 30]  # number of next rows to consider
-# classification labels for model to predict
-label_feature = list(chain(*[[f"trend_{time}days"] for time in time_windows]))
-# all columns added for labeling purpose
-# [max_close, max_duration, min_close, min_duration, trend_Xdays+, trend_Xdays-]
-label_columns = list(
-    chain(*[[
-        f"{time}days_max_close", f"{time}days_max_duration",
-        f"{time}days_min_close", f"{time}days_min_duration",
-        f"trend_{time}days"
-    ] for time in time_windows]))
-
-buy_sell_signals = [
-    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal", 
-    "MA_10_50_Crossover_Signal",  # "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
-    "MACD_Crossover_Signal",
-    "RSI_Over_Bought_Signal",
-    "BB_Signal",  # "VWAP_Crossover_Signal"
-]
-buy_sell_signals_encoded = [
-    f"{signal}_{suffix}" for signal in buy_sell_signals
-    for suffix in ["0", "-1", "1"]
-]
+from datetime import timedelta
 
 
 def perc_change(curr, future):
@@ -86,7 +63,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 continue
 
             label = []
-            for N in time_windows:
+            for N in future_time_windows:
                 # Calculate slice for next N rows, clamp to end
                 end_pos = min(i + N, len(df_window))
                 next_rows = df_window.iloc[i + 1:end_pos]

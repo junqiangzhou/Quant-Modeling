@@ -2,30 +2,11 @@ import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple, List
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 import bisect
 
-from datetime import datetime, timedelta
-from data import data_fetcher, label
-
-base_feature = data_fetcher.base_feature
-label_feature = label.label_feature
-
-look_back_window = 30
-macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
-kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
-rsi_feature = ["RSI_14"]
-buy_sell_signals_encoded = label.buy_sell_signals_encoded
-bullish_bearish_signals = ["Price_Above_MA_5", "Price_Below_MA_5"]
-# Other crossover signals that are not in buy_sell_signals
-other_crossover_signals = [
-    "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
-    "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
-    "VWAP_Crossover_Signal"
-]
-feature_names = [
-    name + "_diff" for name in base_feature
-] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals
+from datetime import datetime
+from config.config import (label_feature, look_back_window, feature_names)
 
 
 def normalize_features(features):

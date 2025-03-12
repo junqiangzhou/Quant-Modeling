@@ -1,13 +1,16 @@
-import sys
+# import sys
 import os
 
-sys.path.append(os.path.abspath('..'))
+# sys.path.append(os.path.abspath('..'))
 
 from data.data_fetcher import get_stock_df
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
-
+from config.config import (ModelType, ENCODER_TYPE, MODEL_TYPE, device,
+                           random_seed, label_feature)
 from model.model import PredictionModel, CustomLoss, XGBoostClassifier
+from model.eval import eval_model, eval_xgboost_model
+
 from typing import Tuple
 import pandas as pd
 import numpy as np
@@ -15,15 +18,11 @@ import random
 from collections import Counter
 
 import torch
-import torch.nn as nn
+from torch.utils.data import DataLoader
 
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
-from data import label
-from config.config import ModelType, ENCODER_TYPE, MODEL_TYPE, device, random_seed
-from model.eval import eval_model, eval_xgboost_model
 
 # # 下载AAPL一年的股票数据
 # df = yf.download('AAPL', start='2023-01-01', end='2024-01-01', interval='1d')
@@ -37,8 +36,6 @@ from model.eval import eval_model, eval_xgboost_model
 # # 归一化数据
 # scaler = MinMaxScaler(feature_range=(0, 1))
 # scaled_data = scaler.fit_transform(df_pct_change.values)
-
-label_names = label.label_feature
 
 
 def set_seed(seed=random_seed):
@@ -79,7 +76,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
 
     # Count the occurrences of each combination
     combination_counts = Counter(y_combinations)
-    zero_label = (0.0, ) * len(label_names)
+    zero_label = (0.0, ) * len(label_feature)
     freq_sum = sum(
         [v for k, v in combination_counts.items() if k != zero_label])
     freq_zero = combination_counts[zero_label]
@@ -239,7 +236,7 @@ def train_model(train_loader: DataLoader,
 
 def train_xgboost_model(train_loader: DataLoader) -> XGBoostClassifier:
 
-    model = XGBoostClassifier(num_classes=len(label_names))
+    model = XGBoostClassifier(num_classes=len(label_feature))
 
     # Train xGBoost
     X_train, y_train = None, None
