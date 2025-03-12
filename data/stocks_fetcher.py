@@ -5,8 +5,11 @@ import random
 MAG7 = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NVDA"]
 ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
 BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
-PICKS = [
-    "NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "XYZ"
+PICKS = ["NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR"]
+CHINA = [
+    "BABA", "TCEHY", "JD", "BIDU", "PDD", "BILI", "DOYU", "HUYA", "NTES",
+    "ZIJMY", "TCOM", "LI", "NIO", "XPEV", "BEKE", "DIDIY", "LKNCY", "ZK",
+    "WRD", "HSAI", "TUYA"
 ]
 TEST_GROUP = ["NFLX", "BABA", "TSM", "JPM", "V"]
 
@@ -39,7 +42,7 @@ def fetch_stocks():
     train_stocks, test_stocks = all_symbols[:train_size], all_symbols[
         train_size:]
 
-    test_stocks += ETF + BOND + PICKS
+    test_stocks += ETF + BOND + PICKS + CHINA
 
     # train_stocks, test_stocks = MAG7, TEST_GROUP
     print(f"# of stocks for training: {len(train_stocks)}")

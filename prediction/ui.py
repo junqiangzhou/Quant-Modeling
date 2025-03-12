@@ -4,7 +4,7 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import glob
 from data.label import label_feature
-from data.stocks_fetcher import MAG7, ETF, BOND, PICKS
+from data.stocks_fetcher import MAG7, ETF, BOND, PICKS, CHINA
 
 buy_names = [name + "+" for name in label_feature]
 sell_names = [name + "-" for name in label_feature]
@@ -90,7 +90,7 @@ def update_tables(n):
                              ascending=False).head(100).reset_index()
     df_sell.drop(columns=buy_names + hold_names, inplace=True)
 
-    stock_picks = ETF + BOND + MAG7 + PICKS
+    stock_picks = ETF + BOND + MAG7 + PICKS + CHINA
     df_focus = df.loc[stock_picks, ["BUY", "SELL", "HOLD"]].reset_index()
 
     return df_buy.to_dict("records"), df_sell.to_dict(
