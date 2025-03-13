@@ -4,7 +4,7 @@ from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from model.model import PredictionModel, CustomLoss
 from config.config import (ENCODER_TYPE, device, look_back_window,
                            label_feature, buy_sell_signals, feature_names)
-from data.stocks_fetcher import MAG7
+from data.stocks_fetcher import MAG7, PICKS
 
 import torch
 import pandas as pd
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     # shift the start date back to get more data for history features
     shifted_start_date = get_date_back(start_date, look_back_window + 20)
-    testing_stocks = MAG7
+    testing_stocks = PICKS
 
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []

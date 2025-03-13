@@ -53,8 +53,9 @@ def create_batch_feature(
     dates = np.array(date_list)
 
     # check how many positive labels
-    ones_per_column = np.sum(labels == 1, axis=0)
-    print(f"Positive labels: {ones_per_column}")
+    buys_per_column = np.sum(labels == 1, axis=0)
+    sells_per_column = np.sum(labels == 2, axis=0)
+    print(f"Buy labels: {buys_per_column}, Sell labels: {sells_per_column}")
 
     return features_scaled, labels, dates
 

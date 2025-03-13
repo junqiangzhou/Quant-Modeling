@@ -29,7 +29,7 @@ MODEL_TYPE = ModelType.TORCH
 random_seed = 42
 
 # history time windows for feature sequence length
-look_back_window = 30
+look_back_window = 50
 
 # future time window where the labels are calculated at training and predicted at inference time
 future_time_windows = [5, 10, 20, 30]  # number of next rows to consider
