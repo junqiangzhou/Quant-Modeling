@@ -35,9 +35,8 @@ def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
 # 3. Positive label: If min_price > curr_price or (max_price > curr_price * 1.1 and max_price comes before min_price)
 # 4. Negative label: If max_price < curr_price or (min_price < curr_price * 0.92 and min_price comes before max_price)
 def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
-    up_perc_threshold = 0.05  # >= 10% is up
-    down_perc_threshold = -0.04  # <= 8% is down
-
+    daily_change_perc = np.percentile(np.abs(df["daily_change"]), 99)
+    print(f"daily change percentile: {daily_change_perc: .2f}")
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
@@ -58,12 +57,15 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
             bullish_signal = df_window.loc[curr_index, "Price_Above_MA_5"]
             bearish_signal = df_window.loc[curr_index, "Price_Below_MA_5"]
 
-            # Skip 1st and last row as it's close to earnings date
+            # Skip 1st and last 6 rows as it's close to earnings date
             if i == 0 or i > len(df_window) - 6:
                 continue
 
             label = []
             for N in future_time_windows:
+                up_perc_threshold = daily_change_perc * N * 0.2  # >= 20% going up at daily perc
+                down_perc_threshold = -daily_change_perc * N * 0.16  # >= 16% going down at daily perc
+
                 # Calculate slice for next N rows, clamp to end
                 end_pos = min(i + N, len(df_window))
                 next_rows = df_window.iloc[i + 1:end_pos]

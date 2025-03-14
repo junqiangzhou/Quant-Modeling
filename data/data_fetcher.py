@@ -42,6 +42,11 @@ def add_detla_from_date(df: pd.DataFrame, date: datetime) -> pd.DataFrame:
     return df
 
 
+def add_daily_change(df: pd.DataFrame) -> pd.DataFrame:
+    df["daily_change"] = (df["Close"] - df["Open"]) / df["Open"]
+    return df
+
+
 # Add earnings information to the dataframe
 # Returns updated dataframe
 def add_earnings_data(df: pd.DataFrame, ticker: Ticker, start_date: str,
@@ -119,6 +124,7 @@ def download_data(stock_symbol: str,
     df = df.loc[start_date:]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
+    df = add_daily_change(df)
     # df = add_detla_from_date(df, df.index[0])
 
     df = add_earnings_data(df, ticker, start_date, end_date_inclusive)

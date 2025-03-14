@@ -8,6 +8,8 @@ import bisect
 from datetime import datetime
 from config.config import (label_feature, look_back_window, feature_names)
 
+verbose = 0
+
 
 def normalize_features(features):
     # Normalize numerical features
@@ -53,9 +55,11 @@ def create_batch_feature(
     dates = np.array(date_list)
 
     # check how many positive labels
-    buys_per_column = np.sum(labels == 1, axis=0)
-    sells_per_column = np.sum(labels == 2, axis=0)
-    print(f"Buy labels: {buys_per_column}, Sell labels: {sells_per_column}")
+    if verbose >= 1:
+        buys_per_column = np.sum(labels == 1, axis=0)
+        sells_per_column = np.sum(labels == 2, axis=0)
+        print(
+            f"Buy labels: {buys_per_column}, Sell labels: {sells_per_column}")
 
     return features_scaled, labels, dates
 
