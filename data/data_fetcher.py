@@ -1,16 +1,14 @@
 import pandas as pd
 from yfinance import Ticker
 # from yahoo_fin import stock_info as si
-import random
 
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
                             add_buy_sell_signals, add_trading_volume,
                             add_bullish_bearish_pattern)
-from data.label import compute_labels
 from data.stocks_fetcher import fetch_stocks
-from config.config import random_seed, base_feature
+from config.config import base_feature
 
 
 def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:
@@ -94,6 +92,9 @@ def download_data(stock_symbol: str,
     df = ticker.history(start=shifted_start_date,
                         end=end_date_inclusive,
                         interval="1d")
+    # Truncate to first 2 decimal digits (without rounding)
+    df = df.applymap(lambda x: int(x * 100) / 100
+                     if isinstance(x, float) else x)
     market_cap = ticker.info["marketCap"]
     # eps = ticker.info["trailingEps"]
     # # Skip stocks with market cap less than 100 billion
@@ -133,17 +134,14 @@ def download_data(stock_symbol: str,
     return df
 
 
-def create_dataset_with_labels(stock_symbol: str,
-                               start_date: str,
-                               end_date: str,
-                               vis: bool = False) -> pd.DataFrame:
+def create_dataset(stock_symbol: str,
+                   start_date: str,
+                   end_date: str,
+                   vis: bool = False) -> pd.DataFrame:
     # Download raw data with technical indicators
     df = download_data(stock_symbol, start_date, end_date)
     if df is None:
         return None
-
-    # create labels and add them into the dataframe
-    df = compute_labels(df)
 
     # Reformat the index to be just days
     df.index = df.index.date
@@ -154,7 +152,6 @@ if __name__ == "__main__":
     start_date = "2023-01-01"
     end_date = "2024-12-31"
     viz = False
-    random.seed(random_seed)
 
     training_stocks, _ = fetch_stocks()
     # Choose N stocks for training
@@ -162,18 +159,14 @@ if __name__ == "__main__":
     #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
     #     "JPM", "NFLX", "WMT"
     # ]
-    # training_stocks = random.sample(training_stocks, 30)
     print("# of stocks: ", len(training_stocks))
     # Generate training data
     print("Generate training data...")
     all_df = None
     for i, stock in enumerate(training_stocks):
-        print(">>>>>>stock: ", stock)
+        # print(">>>>>>stock: ", stock)
         try:
-            df = create_dataset_with_labels(stock,
-                                            start_date,
-                                            end_date,
-                                            vis=viz)
+            df = create_dataset(stock, start_date, end_date, vis=viz)
         except:
             print(f"Error in processing {stock}")
             continue

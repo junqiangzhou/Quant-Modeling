@@ -1,4 +1,5 @@
-from data.data_fetcher import create_dataset_with_labels, get_date_back
+from data.data_fetcher import create_dataset, get_date_back
+from data.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from model.model import PredictionModel, CustomLoss
@@ -124,10 +125,9 @@ if __name__ == "__main__":
     for i, stock in enumerate(testing_stocks):
         print(">>>>>>stock: ", stock)
         try:
-            df = create_dataset_with_labels(stock,
-                                            shifted_start_date,
-                                            end_date,
-                                            vis=False)
+            df = create_dataset(stock, shifted_start_date, end_date, vis=False)
+            # create labels and add them into the dataframe
+            df = compute_labels(df)
             if df is None:
                 continue
 

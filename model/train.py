@@ -4,6 +4,7 @@ import os
 # sys.path.append(os.path.abspath('..'))
 
 from data.data_fetcher import get_stock_df
+from data.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
 from config.config import (ModelType, ENCODER_TYPE, MODEL_TYPE, device,
@@ -274,6 +275,8 @@ if __name__ == "__main__":
         print(">>>>>>stock: ", stock)
         try:
             df = get_stock_df(df_all, stock)
+            # create labels and add them into the dataframe
+            df = compute_labels(df)
             features, labels, dates = create_batch_feature(df)
             if np.isnan(features).any() or np.isnan(labels).any():
                 print(f"NaN detected in {stock}")
