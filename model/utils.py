@@ -1,9 +1,9 @@
+from torch.utils.data import Dataset
+
 import torch
 import math
 import torch.nn as nn
 import numpy as np
-from config.config import device
-from torch.utils.data import DataLoader, Dataset
 
 
 def check_nan_in_tensor(tensor):

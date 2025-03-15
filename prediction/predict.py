@@ -1,16 +1,15 @@
 from data.stocks_fetcher import fetch_stocks
 from data.data_fetcher import get_date_back, download_data
-from data.label import one_hot_encoder, label_feature
-from feature.feature import look_back_window, compute_online_feature, feature_names
+from data.label import one_hot_encoder
+from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
-from config.config import ENCODER_TYPE
-from datetime import date
+from config.config import (ENCODER_TYPE, label_feature, feature_names)
 
+from datetime import date
 import numpy as np
 import torch
 import time
 import pandas as pd
-import yfinance as yf
 import requests
 
 stock1, stocks2 = fetch_stocks()

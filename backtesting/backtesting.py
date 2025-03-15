@@ -1,10 +1,10 @@
 from data.data_fetcher import download_data, get_date_back
-from data.label import one_hot_encoder, label_feature, buy_sell_signals
-from data.stocks_fetcher import MAG7
-from feature.feature import look_back_window, feature_names
+from data.label import one_hot_encoder
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
-from config.config import ENCODER_TYPE, random_seed
+from data.stocks_fetcher import MAG7
+from config.config import (ENCODER_TYPE, random_seed, label_feature,
+                           buy_sell_signals, look_back_window, feature_names)
 
 from typing import List
 from numpy.typing import NDArray

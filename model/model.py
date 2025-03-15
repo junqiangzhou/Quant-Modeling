@@ -1,14 +1,12 @@
+from model.utils import PositionalEncoding, AttentionPooling
+from config.config import EncoderType, device, label_feature
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import xgboost as xgb
 import numpy as np
 from sklearn.model_selection import GridSearchCV
-
-from model.utils import PositionalEncoding, AttentionPooling
-from data import label
-
-from config.config import EncoderType, device
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 256
@@ -255,7 +253,7 @@ class MultiTaskClassifier(nn.Module):
                                 )  # Normalizes across feature dimensions
         self.dropout = nn.Dropout(p=0.1)  # 10% Dropout
         self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
-                             3 * len(label.label_feature))
+                             3 * len(label_feature))
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
@@ -303,15 +301,16 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        # self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
-        #                                    3.0]).to(device)
         # Add different weights to each class
-        weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
-        self.ce_loss = nn.CrossEntropyLoss(weight=weights)
+        self.class_weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
+        self.ce_loss = nn.CrossEntropyLoss(weight=self.class_weights,
+                                           reduction='none')
+        # Add different weights to each label
+        self.label_weights = torch.tensor([1.0, 1.0, 1.0, 1.0]).to(device)
 
     def forward(self, logits, targets):
         # logits shape: (batch_size, 3 * num_labels)
-        num_labels = len(label.label_feature)
+        num_labels = len(label_feature)
         batch_size = logits.shape[0]
         logits = logits.reshape(batch_size * num_labels, 3)
 
@@ -319,9 +318,19 @@ class CustomLoss(nn.Module):
         targets = targets.to(torch.long)
         targets = targets.reshape(batch_size * num_labels)
 
-        loss = self.ce_loss(logits, targets)
+        # weights
+        label_weights = self.label_weights.repeat(
+            batch_size, 1)  # Shape: (batch_size, num_labels)
+        label_weights = label_weights.reshape(batch_size * num_labels)
 
-        return loss
+        # weighted mean from class weights, same as reduction='mean'
+        # https://pytorch.org/docs/main/generated/torch.nn.CrossEntropyLoss.html#torch.nn.CrossEntropyLoss
+        class_weights_sum = self.class_weights[targets].sum()
+        loss = self.ce_loss(logits, targets) / class_weights_sum
+
+        # Apply weights to each different label
+        loss = loss * label_weights
+        return loss.sum()
 
 
 class XGBoostClassifier:
