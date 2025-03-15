@@ -28,7 +28,7 @@ style_table = {
 
 # Load CSV data
 def load_data():
-    csv_files = glob.glob("prediction/data/*.csv")
+    csv_files = glob.glob("predict/data/*.csv")
     csv_files.sort()
     if not csv_files:  # Handle case where no CSV files exist
         return pd.DataFrame(), "No Data"
