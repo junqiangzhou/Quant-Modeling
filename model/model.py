@@ -301,11 +301,12 @@ class CustomLoss(nn.Module):
 
     def __init__(self):
         super(CustomLoss, self).__init__()
-        # self.class_weights = torch.tensor([1.0, 1.0, 2.0, 2.0, 3.0,
-        #                                    3.0]).to(device)
         # Add different weights to each class
-        weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
-        self.ce_loss = nn.CrossEntropyLoss(weight=weights)
+        self.class_weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
+        self.ce_loss = nn.CrossEntropyLoss(weight=self.class_weights,
+                                           reduction='none')
+        # Add different weights to each label
+        self.label_weights = torch.tensor([1.0, 1.0, 1.0, 1.0]).to(device)
 
     def forward(self, logits, targets):
         # logits shape: (batch_size, 3 * num_labels)
@@ -317,9 +318,19 @@ class CustomLoss(nn.Module):
         targets = targets.to(torch.long)
         targets = targets.reshape(batch_size * num_labels)
 
-        loss = self.ce_loss(logits, targets)
+        # weights
+        label_weights = self.label_weights.repeat(
+            batch_size, 1)  # Shape: (batch_size, num_labels)
+        label_weights = label_weights.reshape(batch_size * num_labels)
 
-        return loss
+        # weighted mean from class weights, same as reduction='mean'
+        # https://pytorch.org/docs/main/generated/torch.nn.CrossEntropyLoss.html#torch.nn.CrossEntropyLoss
+        class_weights_sum = self.class_weights[targets].sum()
+        loss = self.ce_loss(logits, targets) / class_weights_sum
+
+        # Apply weights to each different label
+        loss = loss * label_weights
+        return loss.sum()
 
 
 class XGBoostClassifier:
