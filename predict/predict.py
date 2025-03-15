@@ -74,7 +74,7 @@ df_pred["BUY"] = df_pred[buy_names].mean(axis=1)
 df_pred["SELL"] = df_pred[sell_names].mean(axis=1)
 df_pred["HOLD"] = df_pred[hold_names].mean(axis=1)
 df_pred = df_pred.sort_values(by="BUY", ascending=False)
-df_pred.to_csv(f"./prediction/data/prediction_{last_date}.csv",
+df_pred.to_csv(f"./predict/data/prediction_{last_date}.csv",
                float_format="%.2f",
                index=True,
                index_label='stock')
