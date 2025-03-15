@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 -m backtesting.backtesting .
+python3 -m backtest.backtest .
