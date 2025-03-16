@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from yfinance import Ticker
 # from yahoo_fin import stock_info as si
 
@@ -8,6 +9,7 @@ from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_buy_sell_signals, add_trading_volume,
                             add_bullish_bearish_pattern)
 from data.stocks_fetcher import fetch_stocks
+from data.label import one_hot_encoder
 from config.config import base_feature
 
 
@@ -51,21 +53,25 @@ def add_earnings_data(df: pd.DataFrame, ticker: Ticker, start_date: str,
                       end_date: str) -> pd.DataFrame:
     # Function to add earnings information
     earnings = ticker.earnings_dates
-    earnings = earnings.sort_index()
-    earnings = earnings.loc[start_date:end_date]
-    earnings.index.name = "Earnings_Date"
-    earnings.rename(columns={
-        'EPS Estimate': 'EPS_Estimate',
-        'Reported EPS': 'EPS_Reported',
-        'Surprise(%)': 'Surprise(%)'
-    },
-                    inplace=True)
+    if earnings is not None:
+        earnings = earnings.sort_index()
+        earnings = earnings.loc[start_date:end_date]
+        earnings.index.name = "Earnings_Date"
+        earnings.rename(columns={
+            'EPS Estimate': 'EPS_Estimate',
+            'Reported EPS': 'EPS_Reported',
+            'Surprise(%)': 'Surprise(%)'
+        },
+                        inplace=True)
 
-    # Join earnings with data frame
-    df.index = df.index.normalize()
-    earnings.index = earnings.index.normalize()
-    df = df.join(earnings, how='left')
-    df['Earnings_Date'] = df['EPS_Reported'].notna()
+        # Join earnings with data frame
+        df.index = df.index.normalize()
+        earnings.index = earnings.index.normalize()
+        df = df.join(earnings, how='left')
+        df['Earnings_Date'] = df['EPS_Reported'].notna()
+    else:
+        df[["EPS_Estimate", "EPS_Reported", "Surprise(%)"]] = np.nan
+        df['Earnings_Date'] = False
     return df
 
 
@@ -95,14 +101,15 @@ def download_data(stock_symbol: str,
     # Truncate to first 2 decimal digits (without rounding)
     df = df.applymap(lambda x: int(x * 100) / 100
                      if isinstance(x, float) else x)
-    market_cap = ticker.info["marketCap"]
-    # eps = ticker.info["trailingEps"]
-    # # Skip stocks with market cap less than 100 billion
-    # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
-    #     return None
-    print(
-        f"stock {stock_symbol} shape: {df.shape}, market cap: {int(market_cap / 1.0e9)}b"
-    )
+    if "marketCap" in ticker.info:
+        market_cap = ticker.info["marketCap"]
+        # eps = ticker.info["trailingEps"]
+        # # Skip stocks with market cap less than 100 billion
+        # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
+        #     return None
+        print(
+            f"stock {stock_symbol} shape: {df.shape}, market cap: {int(market_cap / 1.0e9)}b"
+        )
 
     # Add technical indicator
     try:
@@ -134,15 +141,14 @@ def download_data(stock_symbol: str,
     return df
 
 
-def create_dataset(stock_symbol: str,
-                   start_date: str,
-                   end_date: str,
-                   vis: bool = False) -> pd.DataFrame:
+def create_dataset(stock_symbol: str, start_date: str,
+                   end_date: str) -> pd.DataFrame:
     # Download raw data with technical indicators
     df = download_data(stock_symbol, start_date, end_date)
     if df is None:
         return None
 
+    df = one_hot_encoder(df)
     # Reformat the index to be just days
     df.index = df.index.date
     return df
@@ -154,11 +160,6 @@ if __name__ == "__main__":
     viz = False
 
     training_stocks, _ = fetch_stocks()
-    # Choose N stocks for training
-    # stock_lists = [
-    #     "AAPL", "MSFT", "NVDA", "AMZN", "GOOG", "AVGO", "META", "LLY", "PANW",
-    #     "JPM", "NFLX", "WMT"
-    # ]
     print("# of stocks: ", len(training_stocks))
     # Generate training data
     print("Generate training data...")
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     for i, stock in enumerate(training_stocks):
         # print(">>>>>>stock: ", stock)
         try:
-            df = create_dataset(stock, start_date, end_date, vis=viz)
+            df = create_dataset(stock, start_date, end_date)
         except:
             print(f"Error in processing {stock}")
             continue

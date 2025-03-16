@@ -125,7 +125,7 @@ if __name__ == "__main__":
     for i, stock in enumerate(testing_stocks):
         print(">>>>>>stock: ", stock)
         try:
-            df = create_dataset(stock, shifted_start_date, end_date, vis=False)
+            df = create_dataset(stock, shifted_start_date, end_date)
             # create labels and add them into the dataframe
             df = compute_labels(df)
             if df is None:

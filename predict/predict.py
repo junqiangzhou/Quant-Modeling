@@ -1,6 +1,5 @@
 from data.stocks_fetcher import fetch_stocks
-from data.data_fetcher import get_date_back, download_data
-from data.label import one_hot_encoder
+from data.data_fetcher import get_date_back, create_dataset
 from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, label_feature, feature_names)
@@ -41,11 +40,7 @@ for i, stock in enumerate(stocks):
     start_date = get_date_back(today, look_back_window + 30)
 
     try:
-        df = download_data(stock, start_date, today, session=session)
-        # Trim data within the interested time window
-        df = df.loc[start_date:]
-        df.index = df.index.date
-        df = one_hot_encoder(df)
+        df = create_dataset(stock, start_date, today, session=session)
     except:
         print(f"{stock} data not available")
         continue

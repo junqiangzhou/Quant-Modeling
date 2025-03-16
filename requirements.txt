@@ -9,3 +9,5 @@ pandas_ta~=0.3.14b0
 yapf~=0.43.0
 yahoo_fin~=0.8.9.1
 imbalanced-learn~=0.13.0
+stable-baselines3~=2.5.0
+gym~=0.26.2

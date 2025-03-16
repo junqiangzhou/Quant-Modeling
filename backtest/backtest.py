@@ -1,5 +1,4 @@
-from data.data_fetcher import download_data, get_date_back
-from data.label import one_hot_encoder
+from data.data_fetcher import create_dataset, get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7
@@ -36,11 +35,7 @@ class BacktestSystem:
             try:
                 shifted_start_date = get_date_back(start_date,
                                                    look_back_window + 30)
-                df = download_data(stock, shifted_start_date, end_date)
-                # Trim data within the interested time window
-                df = df.loc[start_date:end_date]
-                df.index = df.index.date
-                df = one_hot_encoder(df)
+                df = create_dataset(stock, shifted_start_date, end_date)
                 self.stocks_data_pool[stock] = df
             except ValueError:
                 print(f"{stock} data not available")
@@ -131,13 +126,13 @@ class BacktestSystem:
         if should_sell(probs):  # need to sell
             if debug_mode:
                 print(
-                    f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[0, 1:probs.shape[1] + 1:2]}"
+                    f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
         elif should_buy(probs):  # good to buy
             if debug_mode:
                 print(
-                    f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[0, ::2]}"
+                    f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
                 )
             return Action.Buy
         else:
@@ -186,9 +181,7 @@ class BacktestSystem:
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
     testing_stocks = MAG7
-    # testing_stocks = [
-    #     "AAPL"  #"TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NFLX", "NVDA"
-    # ]
+
     # debug_mode = True
     # start_date = "2024-11-01"
     # end_dates = ["2025-03-06"] # ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
