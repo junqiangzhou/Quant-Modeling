@@ -141,10 +141,12 @@ def download_data(stock_symbol: str,
     return df
 
 
-def create_dataset(stock_symbol: str, start_date: str,
-                   end_date: str) -> pd.DataFrame:
+def create_dataset(stock_symbol: str,
+                   start_date: str,
+                   end_date: str,
+                   session=None) -> pd.DataFrame:
     # Download raw data with technical indicators
-    df = download_data(stock_symbol, start_date, end_date)
+    df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
 
