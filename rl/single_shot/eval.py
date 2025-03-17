@@ -1,9 +1,13 @@
 from stable_baselines3 import PPO
+from stable_baselines3.common.utils import set_random_seed
 
-from rl.trading_env import StockTradingEnv
+from rl.single_shot.trading_env import StockTradingEnv
+from config.config import random_seed
+
+set_random_seed(random_seed)
 
 # Load trained model
-model = PPO.load("./rl/ppo_stock_trader")
+model = PPO.load("./rl/single_shot/ppo_stock_trader")
 
 start_date = "2022-01-01"
 end_date = "2022-12-31"

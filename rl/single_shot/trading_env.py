@@ -119,5 +119,5 @@ class StockTradingEnv(gym.Env):
     def render(self, mode='human'):
         """Render the current state (for debugging)."""
         print(
-            f'Step: {self.current_step}, Balance: {self.balance}, Holdings: {self.stock_holdings}, Portfolio: {self.portfolio}'
+            f'Step: {self.current_step}, Balance: {self.balance:.2f}, Holdings: {self.stock_holdings:.1f}, Portfolio: {self.portfolio:.2f}'
         )
