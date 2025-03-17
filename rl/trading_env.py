@@ -1,7 +1,8 @@
 from data.data_fetcher import create_dataset, get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
-from config.config import (ENCODER_TYPE, feature_names, look_back_window, label_feature)
+from config.config import (ENCODER_TYPE, feature_names, look_back_window,
+                           label_feature)
 
 import gym
 import numpy as np
@@ -77,7 +78,7 @@ class StockTradingEnv(gym.Env):
         features = compute_online_feature(self.stock_data, self.current_step)
         if features is None:
             raise ValueError("Error in computing features")
-        
+
         features_tensor = torch.tensor(features, dtype=torch.float32)
         with torch.no_grad():
             logits = self.prediction_model(features_tensor)
@@ -86,7 +87,9 @@ class StockTradingEnv(gym.Env):
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
 
-        obs = np.concatenate(([row['Close']], predicted_prob[0, :], [self.stock_holdings, self.balance])).astype(np.float32)
+        obs = np.concatenate(([row['Close']], predicted_prob[0, :],
+                              [self.stock_holdings,
+                               self.balance])).astype(np.float32)
 
         return obs
 
@@ -109,7 +112,7 @@ class StockTradingEnv(gym.Env):
 
         # Reward: Portfolio value change
         self.portfolio = self.balance + (self.stock_holdings * stock_price)
-        reward = self.portfolio - self.initial_balance
+        reward = (self.portfolio - self.initial_balance) / self.initial_balance
 
         return self._next_observation(), reward, done, {}
 
