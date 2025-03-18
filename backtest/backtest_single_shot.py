@@ -1,6 +1,7 @@
 from rl.single_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_feature, buy_sell_signals
+from data.stocks_fetcher import MAG7
 
 from numpy.typing import NDArray
 import numpy as np
@@ -115,10 +116,10 @@ class BacktestSingleShot(StockTradingEnv):
 
 
 if __name__ == "__main__":
-    stock = "AAPL"
-    start_date = "2021-01-01"
-    end_date = "2021-12-31"
+    start_date = "2022-01-01"
+    end_date = "2022-12-31"
     init_fund = 1.0e4
 
-    backtest = BacktestSingleShot(stock, start_date, end_date, init_fund)
-    backtest.run()
+    for stock in MAG7:
+        backtest = BacktestSingleShot(stock, start_date, end_date, init_fund)
+        backtest.run()

@@ -24,6 +24,9 @@ class StockTradingEnv(gym.Env):
         super(StockTradingEnv, self).__init__()
 
         # Load stock data
+        print(
+            f"Stocks: {stocks}, start date: {start_date}, end date: {end_date}"
+        )
         self.stock_data = {}
         shifted_start_date = get_date_back(start_date, look_back_window + 30)
         for stock in stocks:
@@ -34,7 +37,6 @@ class StockTradingEnv(gym.Env):
                 print(f" Error in processing {stock}")
                 continue
         self.stocks = list(self.stock_data.keys())
-        print("Stocks: ", self.stocks)
         self.num_stocks = len(self.stocks)
 
         # Load prediction model

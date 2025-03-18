@@ -22,6 +22,9 @@ class StockTradingEnv(gym.Env):
                  init_fund: float = 1.0e4):
         super(StockTradingEnv, self).__init__()
 
+        print(
+            f"Stocks: {stock}, start date: {start_date}, end date: {end_date}")
+        # Load stock data
         shifted_start_date = get_date_back(start_date, look_back_window + 30)
         self.stock_data = create_dataset(stock, shifted_start_date, end_date)
 
