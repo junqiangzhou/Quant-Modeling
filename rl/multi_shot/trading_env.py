@@ -4,7 +4,7 @@ from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, Action, feature_names,
                            look_back_window, label_feature)
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 import pandas as pd

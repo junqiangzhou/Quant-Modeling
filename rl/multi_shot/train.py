@@ -1,5 +1,5 @@
 from rl.multi_shot.trading_env import StockTradingEnv
-from config.config import random_seed, device
+from config.config import random_seed
 from data.stocks_fetcher import MAG7
 
 from stable_baselines3.common.utils import set_random_seed
@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 
 set_random_seed(random_seed)
+device = 'cpu'
 
 # Create environment
 start_dates = [

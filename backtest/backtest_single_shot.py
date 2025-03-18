@@ -116,8 +116,8 @@ class BacktestSingleShot(StockTradingEnv):
 
 
 if __name__ == "__main__":
-    start_date = "2022-01-01"
-    end_date = "2022-12-31"
+    start_date = "2018-01-01"
+    end_date = "2018-12-31"
     init_fund = 1.0e4
 
     for stock in MAG7:

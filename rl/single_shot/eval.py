@@ -10,8 +10,8 @@ set_random_seed(random_seed)
 # Load trained model
 model = PPO.load("./rl/single_shot/ppo_stock_trader")
 
-start_date = "2022-01-01"
-end_date = "2022-12-31"
+start_date = "2018-01-01"
+end_date = "2018-12-31"
 for stock in MAG7:
     env = StockTradingEnv(stock, start_date, end_date)
 
