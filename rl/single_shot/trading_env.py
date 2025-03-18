@@ -1,8 +1,8 @@
 from data.data_fetcher import create_dataset, get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
-from config.config import (ENCODER_TYPE, feature_names, look_back_window,
-                           label_feature)
+from config.config import (ENCODER_TYPE, Action, feature_names,
+                           look_back_window, label_feature)
 
 import gym
 import numpy as np
@@ -32,9 +32,10 @@ class StockTradingEnv(gym.Env):
         self.prediction_model.load_state_dict(torch.load('./model/model.pth'))
         self.prediction_model.eval()
 
-        self.initial_balance = init_fund
+        self.init_balance = init_fund
         self.balance = init_fund
         self.stock_holdings = 0
+        self.cost_base = 0
         self.portfolio = init_fund
 
         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -67,8 +68,10 @@ class StockTradingEnv(gym.Env):
     def reset(self):
         """Reset the environment at the start of an episode."""
         self.current_step = self.start_date
-        self.balance = self.initial_balance
+        self.balance = self.init_balance
         self.stock_holdings = 0
+        self.cost_base = 0
+        self.portfolio = self.init_balance
         return self._next_observation()
 
     def _next_observation(self):
@@ -98,21 +101,25 @@ class StockTradingEnv(gym.Env):
         row = self.stock_data.loc[self.current_step]
         stock_price = row['Close']
 
-        if action == 1 and self.balance >= stock_price:  # Buy
+        if action == int(
+                Action.Buy.value) and self.balance >= stock_price:  # Buy
             num_buy = self.balance // stock_price
             self.stock_holdings += num_buy
             self.balance -= stock_price * num_buy
-        elif action == 2 and self.stock_holdings > 0:  # Sell
+            self.cost_base = stock_price
+        elif action == int(
+                Action.Sell.value) and self.stock_holdings > 0:  # Sell
             num_sell = self.stock_holdings
             self.stock_holdings -= num_sell
             self.balance += stock_price * num_sell
+            self.cost_base = 0.0
 
         done = self.current_step >= self.end_date
         self.current_step = self.next_step(self.current_step)
 
         # Reward: Portfolio value change
         self.portfolio = self.balance + (self.stock_holdings * stock_price)
-        reward = (self.portfolio - self.initial_balance) / self.initial_balance
+        reward = (self.portfolio - self.init_balance) / self.init_balance
 
         return self._next_observation(), reward, done, {}
 

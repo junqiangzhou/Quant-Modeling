@@ -25,6 +25,13 @@ class ModelType(Enum):
 
 MODEL_TYPE = ModelType.TORCH
 
+
+class Action(Enum):
+    Hold = 0
+    Buy = 1
+    Sell = 2
+
+
 # random seed across code base for reproducibility
 random_seed = 42
 

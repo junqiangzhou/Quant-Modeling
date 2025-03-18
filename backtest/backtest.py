@@ -2,7 +2,7 @@ from data.data_fetcher import create_dataset, get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7
-from config.config import (ENCODER_TYPE, random_seed, label_feature,
+from config.config import (ENCODER_TYPE, Action, random_seed, label_feature,
                            buy_sell_signals, look_back_window, feature_names)
 
 from typing import List
@@ -15,12 +15,6 @@ from enum import Enum
 import collections
 import random
 import bisect
-
-
-class Action(Enum):
-    Hold = 0
-    Buy = 1
-    Sell = -1
 
 
 class BacktestSystem:
@@ -180,14 +174,18 @@ class BacktestSystem:
 
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
-    testing_stocks = MAG7
+    # testing_stocks = MAG7
 
-    # debug_mode = True
-    # start_date = "2024-11-01"
-    # end_dates = ["2025-03-06"] # ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
+    testing_stocks = ["AAPL"]
+
     debug_mode = False
-    start_date = "2015-01-01"
-    end_dates = ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
+    start_date = "2021-01-01"
+    end_dates = ["2021-12-31"
+                 ]  # ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
+
+    # debug_mode = False
+    # start_date = "2015-01-01"
+    # end_dates = ["2015-12-31", "2016-12-31", "2018-12-31", "2020-12-31"]
 
     for end_date in end_dates:
         testing = BacktestSystem(testing_stocks, start_date, end_date)
