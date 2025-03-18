@@ -36,6 +36,7 @@ env_fns = [
 
 # Single process
 envs = DummyVecEnv(env_fns)
+envs.seed(random_seed)
 # Parallel processes
 # envs = SubprocVecEnv(env_fns)
 

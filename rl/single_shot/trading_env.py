@@ -10,7 +10,7 @@ import torch
 import pandas as pd
 from datetime import datetime, timedelta
 import bisect
-from gym import spaces
+from gymnasium import spaces
 
 
 class StockTradingEnv(gym.Env):
@@ -68,14 +68,17 @@ class StockTradingEnv(gym.Env):
                 break
         return next_step
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """Reset the environment at the start of an episode."""
+        if seed is not None:
+            np.random.seed(seed)
+
         self.current_step = self.start_date
         self.balance = self.init_balance
         self.stock_holdings = 0
         self.cost_base = 0
         self.portfolio = self.init_balance
-        return self._next_observation()
+        return self._next_observation(), {}
 
     def _next_observation(self):
         """Get next observation (stock price, predicted probability, holdings, balance)."""
@@ -123,8 +126,9 @@ class StockTradingEnv(gym.Env):
         # Reward: Portfolio value change
         self.portfolio = self.balance + (self.stock_holdings * stock_price)
         reward = (self.portfolio - self.init_balance) / self.init_balance
+        truncated = False
 
-        return self._next_observation(), reward, done, {}
+        return self._next_observation(), reward, done, truncated, {}
 
     def render(self, mode='human'):
         """Render the current state (for debugging)."""

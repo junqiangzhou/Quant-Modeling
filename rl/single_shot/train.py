@@ -35,11 +35,15 @@ env_fns = [
 ]
 
 # Single process
+
 envs = DummyVecEnv(env_fns)
+envs.seed(random_seed)
+# envs.action_space.seed(random_seed)
+# envs.observation_space.seed(random_seed)
 
 # Train RL agent
 policy_kwargs = dict(
-    net_arch=[256, 256],  # Increase layers and neurons for complex problems
+    net_arch=[64, 64],  # Increase layers and neurons for complex problems
     activation_fn=torch.nn.ReLU  # Change activation (e.g., ReLU, Tanh)
 )
 lr_schedule = lambda progress: 1e-4 * progress  # Linearly decrease LR
@@ -49,7 +53,11 @@ lr_schedule = lambda progress: 1e-4 * progress  # Linearly decrease LR
 # batch_size=128,
 # n_epochs=50,
 # ent_coef=0.01,
-model = PPO("MlpPolicy", envs, verbose=1, device=device)
+model = PPO("MlpPolicy",
+            envs,
+            policy_kwargs=policy_kwargs,
+            verbose=1,
+            device=device)
 model.learn(total_timesteps=100000)
 
 # Save model
