@@ -92,6 +92,16 @@ def download_data(stock_symbol: str,
     else:
         ticker = Ticker(stock_symbol, session=session)
 
+    if "marketCap" in ticker.info:
+        market_cap = ticker.info["marketCap"]
+        # eps = ticker.info["trailingEps"]
+        # # Skip stocks with market cap less than 100 billion
+        # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
+        #     return None
+        print(
+            f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b"
+        )
+
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
     end_date_inclusive = get_date_back(end_date, -1)
@@ -101,15 +111,6 @@ def download_data(stock_symbol: str,
     # Truncate to first 2 decimal digits (without rounding)
     df = df.applymap(lambda x: int(x * 100) / 100
                      if isinstance(x, float) else x)
-    if "marketCap" in ticker.info:
-        market_cap = ticker.info["marketCap"]
-        # eps = ticker.info["trailingEps"]
-        # # Skip stocks with market cap less than 100 billion
-        # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
-        #     return None
-        print(
-            f"stock {stock_symbol} shape: {df.shape}, market cap: {int(market_cap / 1.0e9)}b"
-        )
 
     # Add technical indicator
     try:

@@ -48,3 +48,25 @@ def fetch_stocks():
     print(f"# of stocks for training: {len(train_stocks)}")
     print(f"# of stocks for testing: {len(test_stocks)}")
     return train_stocks, test_stocks
+
+
+def get_nasdaq_nyse_stocks():
+    # URLs for NASDAQ and NYSE stock listings
+    nasdaq_url = "ftp://ftp.nasdaqtrader.com/SymbolDirectory/nasdaqlisted.txt"
+
+    # Read NASDAQ data
+    nasdaq_data = pd.read_csv(nasdaq_url, sep="|")
+    # Extract stock symbols
+    df = nasdaq_data
+    df = df[df["Test Issue"] == "N"]
+    df = df[df["Market Category"] == "G"]
+    df = df[df["ETF"] == "N"]
+    nasdaq_stocks = df["Symbol"].tolist()
+    print(f"NASDAQ stocks: {len(nasdaq_stocks)}")
+
+    # nyse_url = "ftp://ftp.nasdaqtrader.com/SymbolDirectory/otherlisted.txt"
+    # nyse_data = pd.read_csv(nyse_url, sep="|")
+    # nyse_stocks = nyse_data["ACT Symbol"].tolist()
+    # print(f"NYSE stocks: {len(nyse_stocks)}")
+
+    return nasdaq_stocks

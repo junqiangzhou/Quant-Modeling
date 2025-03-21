@@ -4,7 +4,7 @@ from data.stocks_fetcher import MAG7
 
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
 import torch
 
@@ -38,27 +38,30 @@ env_fns = [
 
 envs = DummyVecEnv(env_fns)
 envs.seed(random_seed)
+# envs = VecNormalize(envs, norm_obs=True, norm_reward=False)
 # envs.action_space.seed(random_seed)
 # envs.observation_space.seed(random_seed)
 
 # Train RL agent
 policy_kwargs = dict(
     net_arch=[64, 64],  # Increase layers and neurons for complex problems
-    activation_fn=torch.nn.ReLU  # Change activation (e.g., ReLU, Tanh)
-)
-lr_schedule = lambda progress: 1e-4 * progress  # Linearly decrease LR
+    activation_fn=torch.nn.ReLU)
+# lr_schedule = lambda progress: 1e-3 * progress  # Linearly decrease LR
 
-# policy_kwargs=policy_kwargs,
-# learning_rate=lr_schedule,
-# batch_size=128,
-# n_epochs=50,
-# ent_coef=0.01,
-model = PPO("MlpPolicy",
-            envs,
-            policy_kwargs=policy_kwargs,
-            verbose=1,
-            device=device)
-model.learn(total_timesteps=100000)
+model = PPO(
+    "MlpPolicy",
+    envs,
+    policy_kwargs=policy_kwargs,
+    learning_rate=0.0003,
+    ent_coef=0.01,
+    # n_steps=4096,
+    # n_epochs=50,
+    batch_size=128,
+    gamma=0.95,
+    verbose=1,
+    clip_range=0.2,
+    device=device)
+model.learn(total_timesteps=500000)
 
 # Save model
 model.save("./rl/single_shot/ppo_stock_trader")

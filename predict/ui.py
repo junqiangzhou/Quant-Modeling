@@ -91,7 +91,7 @@ def update_tables(n):
                              ascending=False).head(100).reset_index()
     df_sell.drop(columns=buy_names + hold_names, inplace=True)
 
-    stock_picks = ETF + BOND + MAG7 + PICKS + CHINA
+    stock_picks = ETF + BOND + MAG7 + PICKS + CHINA + ["HCA", "OMC"]
     df_focus = df.loc[stock_picks, ["BUY", "SELL", "HOLD"]].reset_index()
 
     return df_buy.to_dict("records"), df_sell.to_dict(

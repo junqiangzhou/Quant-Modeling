@@ -37,8 +37,8 @@ class StockTradingEnv(gym.Env):
 
         self.init_balance = init_fund
         self.balance = init_fund
-        self.stock_holdings = 0
-        self.cost_base = 0
+        self.stock_holdings = 0  # Number of shares holding
+        self.cost_base = 0  # purchase price
         self.portfolio = init_fund
 
         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -46,15 +46,17 @@ class StockTradingEnv(gym.Env):
         self.start_date = self.stock_data.index[start_index]
         self.end_date = self.stock_data.index[-1]
         self.current_step = self.start_date
+        self.price_scale = self.stock_data.loc[self.start_date][
+            'Close']  # Normalize observation
 
         # Define action space: 0 = Hold, 1 = Buy, 2 = Sell
         self.action_space = spaces.Discrete(3)
 
         # Observation space:
-        # 1) stock price (1)
+        # 1) stock price (1) -- Normalized
         # 2) predicted probability (3)
         # 3) holdings (1)
-        # 4) balance (1)
+        # 4) balance (1) -- Normalized
         self.observation_space = spaces.Box(low=0,
                                             high=np.inf,
                                             shape=(6, ),
@@ -96,9 +98,10 @@ class StockTradingEnv(gym.Env):
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
 
-        obs = np.concatenate(([row['Close']], predicted_prob[0, :],
-                              [self.stock_holdings,
-                               self.balance])).astype(np.float32)
+        obs = np.concatenate(
+            ([row['Close'] / self.price_scale], predicted_prob[0, :],
+             [self.stock_holdings,
+              self.balance / self.init_balance])).astype(np.float32)
 
         return obs
 
@@ -121,13 +124,13 @@ class StockTradingEnv(gym.Env):
             self.cost_base = 0.0
 
         done = self.current_step >= self.end_date
-        self.current_step = self.next_step(self.current_step)
 
         # Reward: Portfolio value change
         self.portfolio = self.balance + (self.stock_holdings * stock_price)
         reward = (self.portfolio - self.init_balance) / self.init_balance
         truncated = False
 
+        self.current_step = self.next_step(self.current_step)
         return self._next_observation(), reward, done, truncated, {}
 
     def render(self, mode='human'):

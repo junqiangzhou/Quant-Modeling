@@ -108,7 +108,7 @@ class BacktestSingleShot(StockTradingEnv):
             if self.debug_mode:
                 self.render()
             action = self.compute_action()
-            obs, reward, done, _ = self.step(int(action.value))
+            obs, reward, done, _, _ = self.step(int(action.value))
 
         print(f"Quant profit: {reward * 100: .2f} %")
 

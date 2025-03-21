@@ -8,7 +8,7 @@ from data.stocks_fetcher import MAG7
 set_random_seed(random_seed)
 
 # Load trained model
-model = PPO.load("./rl/single_shot/ppo_stock_trader")
+model = PPO.load("./rl/single_shot/ppo_stock_trader", device='cpu')
 
 start_date = "2018-01-01"
 end_date = "2018-12-31"
@@ -16,11 +16,11 @@ for stock in MAG7:
     env = StockTradingEnv(stock, start_date, end_date)
 
     # Test RL agent
-    obs = env.reset()
+    obs, _ = env.reset()
     done = False
     while not done:
         action, _ = model.predict(obs)
-        obs, reward, done, _ = env.step(action)
+        obs, reward, done, _, _ = env.step(action)
         # env.render()
 
     start_price, end_price = env.stock_data.loc[
