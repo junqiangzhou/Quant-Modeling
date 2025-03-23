@@ -6,8 +6,8 @@ from yfinance import Ticker
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_buy_sell_signals, add_trading_volume,
-                            add_bullish_bearish_pattern)
+                            add_trading_volume, add_bullish_bearish_pattern)
+from data.buy_sell_signal import add_buy_sell_signals
 from data.stocks_fetcher import fetch_stocks
 from data.label import one_hot_encoder
 from config.config import base_feature
