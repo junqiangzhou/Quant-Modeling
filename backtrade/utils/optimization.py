@@ -346,23 +346,24 @@ def optimize_multi_objective(
 
 
 if __name__ == "__main__":
-    df = load_data_from_yahoo("TSLA", "2020-01-01", "2023-12-31", save_to_csv=False)
+    df = load_data_from_yahoo("TSLA",
+                              "2020-01-01",
+                              "2023-12-31",
+                              save_to_csv=False)
     bt_data = create_bt_data_feed(df)
 
     # 定义参数优化范围
-    ma_short_range = (5, 20)   # 短期均线范围
-    ma_long_range = (20, 50)   # 长期均线范围
-    step = 5                   # 步长
+    ma_short_range = (5, 20)  # 短期均线范围
+    ma_long_range = (20, 50)  # 长期均线范围
+    step = 5  # 步长
 
     # 执行参数优化
-    opt_results = optimize_ma_strategy(
-        data=bt_data,
-        ma_short_range=ma_short_range,
-        ma_long_range=ma_long_range,
-        step=step,
-        commission=0.001,
-        initial_cash=100000
-    )
+    opt_results = optimize_ma_strategy(data=bt_data,
+                                       ma_short_range=ma_short_range,
+                                       ma_long_range=ma_long_range,
+                                       step=step,
+                                       commission=0.001,
+                                       initial_cash=100000)
 
     # 显示优化结果
     opt_results.head(10)

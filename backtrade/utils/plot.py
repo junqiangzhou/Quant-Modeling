@@ -1,6 +1,135 @@
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+
+
+class PerformanceAnalyzer(object):
+    """
+    性能分析工具
+    """
+
+    @staticmethod
+    def analyze_returns(returns, benchmark_returns=None):
+        """
+        分析策略收益表现
+        
+        参数:
+        returns (pandas Series): 策略日收益率
+        benchmark_returns (pandas Series, optional): 基准日收益率
+        
+        返回:
+        dict: 性能指标字典
+        """
+        # 确保returns是pandas Series
+        if not isinstance(returns, pd.Series):
+            returns = pd.Series(returns)
+
+        # 如果有基准，确保它也是pandas Series
+        if benchmark_returns is not None and not isinstance(
+                benchmark_returns, pd.Series):
+            benchmark_returns = pd.Series(benchmark_returns)
+
+        # 计算累计收益
+        cum_returns = (1 + returns).cumprod() - 1
+
+        # 计算年化收益率 (假设252个交易日)
+        n_days = len(returns)
+        n_years = n_days / 252
+        annual_return = ((1 + cum_returns.iloc[-1])**(1 / n_years)) - 1
+
+        # 计算波动率 (年化)
+        daily_vol = returns.std()
+        annual_vol = daily_vol * np.sqrt(252)
+
+        # 计算夏普比率 (假设无风险利率为0)
+        sharpe_ratio = annual_return / annual_vol if annual_vol > 0 else 0
+
+        # 计算最大回撤
+        rolling_max = cum_returns.cummax()
+        drawdown = (cum_returns - rolling_max) / (1 + rolling_max)
+        max_drawdown = drawdown.min()
+
+        # 如果有基准收益率，计算相对指标
+        alpha, beta = 0, 0
+        if benchmark_returns is not None:
+            # 确保基准收益率与策略收益率有相同的日期
+            common_idx = returns.index.intersection(benchmark_returns.index)
+            if len(common_idx) > 0:
+                returns = returns.loc[common_idx]
+                benchmark_returns = benchmark_returns.loc[common_idx]
+
+                # 计算Beta (市场敏感度)
+                covar = returns.cov(benchmark_returns)
+                benchmark_var = benchmark_returns.var()
+                beta = covar / benchmark_var if benchmark_var > 0 else 0
+
+                # 计算Alpha (超额收益)
+                benchmark_annual_return = (
+                    (1 + (1 + benchmark_returns).cumprod().iloc[-1])
+                    **(1 / n_years)) - 1
+                alpha = annual_return - (beta * benchmark_annual_return)
+
+        # 汇总结果
+        results = {
+            'Total Return': cum_returns.iloc[-1],
+            'Annual Return': annual_return,
+            'Annual Volatility': annual_vol,
+            'Sharpe Ratio': sharpe_ratio,
+            'Max Drawdown': max_drawdown,
+            'Alpha': alpha,
+            'Beta': beta
+        }
+
+        return results
+
+    @staticmethod
+    def plot_returns(returns,
+                     benchmark_returns=None,
+                     title="Strategy Performance"):
+        """
+        绘制策略收益曲线
+        
+        参数:
+        returns (pandas Series): 策略日收益率
+        benchmark_returns (pandas Series, optional): 基准日收益率
+        title (str): 图表标题
+        """
+        plt.figure(figsize=(12, 8))
+
+        # 计算累计收益
+        cum_returns = (1 + returns).cumprod() - 1
+
+        # 绘制策略收益曲线
+        plt.plot(cum_returns.index,
+                 cum_returns.values,
+                 label='Strategy',
+                 linewidth=2)
+
+        # 如果有基准，绘制基准收益曲线
+        if benchmark_returns is not None:
+            # 确保基准收益率与策略收益率有相同的日期
+            common_idx = returns.index.intersection(benchmark_returns.index)
+            if len(common_idx) > 0:
+                benchmark_returns = benchmark_returns.loc[common_idx]
+                cum_benchmark = (1 + benchmark_returns).cumprod() - 1
+                plt.plot(cum_benchmark.index,
+                         cum_benchmark.values,
+                         label='Benchmark',
+                         linewidth=2,
+                         alpha=0.7)
+
+        # 绘制零线
+        plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+
+        # 设置图表
+        plt.title(title, fontsize=16)
+        plt.xlabel('Date', fontsize=12)
+        plt.ylabel('Cumulative Returns', fontsize=12)
+        plt.legend(fontsize=12)
+        plt.grid(True, alpha=0.3)
+
+        return plt.gcf()
 
 
 def plot_performance_analysis(results):

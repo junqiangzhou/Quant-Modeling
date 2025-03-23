@@ -1,4 +1,4 @@
-from .backtest import *
+from .backtest_runner import *
 from .basic_visualization import *
 # from .dashboard import *
 from .data import *

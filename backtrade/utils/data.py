@@ -80,18 +80,18 @@ def create_bt_data_feed(df, start_date=None, end_date=None):
     # 确保索引是日期时间
     if not isinstance(df.index, pd.DatetimeIndex):
         df.index = pd.to_datetime(df.index)
-    
+
     # 如果有日期过滤
     if start_date is not None:
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
         df = df[df.index >= start_date]
-    
+
     if end_date is not None:
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
         df = df[df.index <= end_date]
-    
+
     # 将DataFrame转换为backtrader可用的DataFeed
     data = bt.feeds.PandasData(
         dataname=df,
@@ -103,8 +103,8 @@ def create_bt_data_feed(df, start_date=None, end_date=None):
         volume='Volume',
         openinterest=-1  # 不使用openinterest
     )
-    
-    return data 
+
+    return data
 
 
 def load_data_from_csv(file_path):
