@@ -98,9 +98,7 @@ def download_data(stock_symbol: str,
         # # Skip stocks with market cap less than 100 billion
         # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
         #     return None
-        print(
-            f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b"
-        )
+        print(f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b")
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
