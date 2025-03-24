@@ -174,9 +174,7 @@ class BacktestSystem:
 
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
-    # testing_stocks = MAG7
-
-    testing_stocks = ["AAPL"]
+    testing_stocks = MAG7
 
     debug_mode = False
     start_date = "2021-01-01"

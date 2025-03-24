@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import time
 from yfinance import Ticker
+import requests
 # from yahoo_fin import stock_info as si
 
 from datetime import datetime, timedelta
@@ -167,12 +169,16 @@ if __name__ == "__main__":
     # Generate training data
     print("Generate training data...")
     all_df = None
+    session = requests.Session()
     for i, stock in enumerate(training_stocks):
         # print(">>>>>>stock: ", stock)
+        if i >= 100 and i % 100 == 0:
+            time.sleep(60)
+
         try:
-            df = create_dataset(stock, start_date, end_date)
-        except:
-            print(f"Error in processing {stock}")
+            df = create_dataset(stock, start_date, end_date, session=session)
+        except Exception as e:
+            print(f"Error in processing {stock}: {e}")
             continue
         if df is None:
             continue

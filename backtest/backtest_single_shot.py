@@ -16,7 +16,7 @@ class BacktestSingleShot(StockTradingEnv):
                  end_date: str,
                  init_fund: float = 1.0e4):
         super().__init__(stock, start_date, end_date, init_fund)
-        self.debug_mode = False
+        self.debug_mode = True
 
     def compute_action(self) -> Action:
         date = self.current_step
@@ -116,8 +116,8 @@ class BacktestSingleShot(StockTradingEnv):
 
 
 if __name__ == "__main__":
-    start_date = "2018-01-01"
-    end_date = "2018-12-31"
+    start_date = "2025-01-01"
+    end_date = "2025-03-23"
     init_fund = 1.0e4
 
     for stock in MAG7:
