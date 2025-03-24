@@ -1,0 +1,74 @@
+from backtrade.utils import load_data_from_yahoo, run_backtest
+from backtrade.utils import plot_performance_analysis, plot_backtest_results
+
+from backtrade.strategy import (
+    VolumeBreakoutStrategy,
+    BollingerRSIStrategyV2,
+    BollingerStrategyEnhanced,
+    BuyAndHoldStrategy,
+    DoubleMAStrategy,
+    DMAStrategyIntradayImproved,
+    DMABollPartialIntradayStrategy,
+    MACrossoverStrategy,
+    NaiveRsiStrategy,
+    TurtleStrategyImproved,
+    MFIStrategy,
+    OBVStrategy,
+    RSIBBStrategy,
+    VWAPStrategy,
+)
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import warnings
+
+warnings.filterwarnings('ignore')
+
+plt.style.use("seaborn-darkgrid")
+pd.set_option('display.max_columns', None)
+
+df = load_data_from_yahoo("TSLA",
+                          "2020-01-01",
+                          "2023-12-31",
+                          save_to_csv=False)
+
+# 查看数据统计信息
+print(f"数据时间范围: {df.index.min()} 至 {df.index.max()}")
+print(f"共 {len(df)} 条记录")
+print(f"数据列: {df.columns.tolist()}")
+
+# 显示基本统计信息
+df.describe()
+
+# 执行回测
+for strategy_class in [
+        VolumeBreakoutStrategy,
+        BollingerRSIStrategyV2,
+        BollingerStrategyEnhanced,
+        BuyAndHoldStrategy,
+        DoubleMAStrategy,
+        DMAStrategyIntradayImproved,
+        DMABollPartialIntradayStrategy,
+        MACrossoverStrategy,
+        NaiveRsiStrategy,
+        TurtleStrategyImproved,
+        MFIStrategy,
+        OBVStrategy,
+        RSIBBStrategy,
+        VWAPStrategy,
+]:
+    print(f"回测 {strategy_class.__name__}")
+    results, strategy = run_backtest(df=df,
+                                     strategy_class=strategy_class,
+                                     initial_cash=100000,
+                                     commission=0.001)
+
+    viz = False
+    if viz:
+        fig = plot_backtest_results(df, results, max_candles=200)
+        fig.show()
+        fig, table = plot_performance_analysis(results)
+        fig.show()
+        table.show()
+
+    print("\n")

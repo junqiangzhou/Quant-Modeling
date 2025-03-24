@@ -8,8 +8,8 @@ import requests
 from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_buy_sell_signals, add_trading_volume,
-                            add_bullish_bearish_pattern)
+                            add_trading_volume, add_bullish_bearish_pattern)
+from data.buy_sell_signal import add_buy_sell_signals
 from data.stocks_fetcher import fetch_stocks
 from data.label import one_hot_encoder
 from config.config import base_feature
@@ -100,9 +100,7 @@ def download_data(stock_symbol: str,
         # # Skip stocks with market cap less than 100 billion
         # if market_cap < 50.0e9 or eps < 0.0:  # 100 billion
         #     return None
-        print(
-            f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b"
-        )
+        print(f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b")
 
     # We need to look back some time window so that all technical indicators are all valid.
     shifted_start_date = get_date_back(start_date, windows[-1] + 50)
