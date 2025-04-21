@@ -1,4 +1,4 @@
-def add_buy_sell_signals(df):
+def add_bullish_bearish_signals(df):
     # shift df by 1 row so we can compare with prev day
     df_shift = df.shift(1)
 
@@ -95,5 +95,11 @@ def add_buy_sell_signals(df):
 
     # # ATR-Based Risk Management (Optional Stop-Loss Indicator)
     # df['ATR_Stop'] = df['Close'] - df['ATR']  # Example: Stop-loss at ATR below Close
+
+    # Price Above/Below 5day Moving Average
+    df['Price_Above_MA_5'] = 0
+    df.loc[df["Close"] > df["MA_5"], 'Price_Above_MA_5'] = 1
+    df['Price_Below_MA_5'] = 0
+    df.loc[df["Close"] < df["MA_5"], 'Price_Below_MA_5'] = 1
 
     return df

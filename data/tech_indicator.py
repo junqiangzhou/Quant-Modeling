@@ -144,11 +144,3 @@ def add_atr(df, atr_window=14):
     df.drop(columns=['High-Low', 'High-Close', 'Low-Close', 'TR'],
             inplace=True)  # Remove intermediate calculations
     return df
-
-
-def add_bullish_bearish_pattern(df):
-    df['Price_Above_MA_5'] = 0
-    df.loc[df["Close"] > df["MA_5"], 'Price_Above_MA_5'] = 1
-    df['Price_Below_MA_5'] = 0
-    df.loc[df["Close"] < df["MA_5"], 'Price_Below_MA_5'] = 1
-    return df

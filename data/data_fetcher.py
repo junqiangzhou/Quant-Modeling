@@ -5,12 +5,13 @@ import requests
 import time
 from yfinance import Ticker
 
-from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
-                            add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_trading_volume, add_bullish_bearish_pattern)
-from data.buy_sell_signal import add_buy_sell_signals
+from data.tech_indicator import (add_macd, add_moving_averages, add_kdj,
+                                 add_rsi, add_obv, add_vwap,
+                                 add_bollinger_bands, add_atr,
+                                 add_trading_volume)
+from feature.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
-from data.label import one_hot_encoder
+from feature.label import one_hot_encoder
 from data.utils import get_date_back
 from config.config import base_feature
 
@@ -111,8 +112,7 @@ def download_data(stock_symbol: str,
         df = add_vwap(df)
         df = add_bollinger_bands(df)
         df = add_atr(df)
-        df = add_buy_sell_signals(df)
-        df = add_bullish_bearish_pattern(df)
+        df = add_bullish_bearish_signals(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")
