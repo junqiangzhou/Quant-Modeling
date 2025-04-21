@@ -1,4 +1,4 @@
-from data.data_fetcher import get_stock_df
+from data.utils import get_stock_df
 from config.config import label_feature
 
 import pandas as pd

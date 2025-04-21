@@ -1,11 +1,10 @@
+from datetime import datetime
 import pandas as pd
 import numpy as np
+import requests
 import time
 from yfinance import Ticker
-import requests
-# from yahoo_fin import stock_info as si
 
-from datetime import datetime, timedelta
 from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
                             add_obv, add_vwap, add_bollinger_bands, add_atr,
                             add_trading_volume, add_bullish_bearish_pattern)
@@ -14,11 +13,6 @@ from data.stocks_fetcher import fetch_stocks
 from data.label import one_hot_encoder
 from data.utils import get_date_back
 from config.config import base_feature
-
-
-def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:
-    df = df_all[df_all['stock'] == stock]
-    return df
 
 
 # Add columns that calculates the delta w.r.t. previous row for each base feature

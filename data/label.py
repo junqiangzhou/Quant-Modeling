@@ -1,17 +1,10 @@
-from config.config import (future_time_windows, label_columns,
-                           buy_sell_signals, buy_sell_signals_encoded)
-
 import pandas as pd
 import numpy as np
 from datetime import timedelta
 
-
-def perc_change(curr, future):
-    return (future - curr) / max(abs(curr), 1e-3)
-
-
-def days_diff(date1, date2):
-    return abs((date2 - date1).days)
+from data.utils import perc_change, days_diff
+from config.config import (future_time_windows, label_columns,
+                           buy_sell_signals, buy_sell_signals_encoded)
 
 
 def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
