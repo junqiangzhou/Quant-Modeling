@@ -1,23 +1,19 @@
+from datetime import datetime
 import pandas as pd
 import numpy as np
+import requests
 import time
 from yfinance import Ticker
-import requests
-# from yahoo_fin import stock_info as si
 
-from datetime import datetime, timedelta
-from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
-                            add_obv, add_vwap, add_bollinger_bands, add_atr,
-                            add_trading_volume, add_bullish_bearish_pattern)
-from data.buy_sell_signal import add_buy_sell_signals
+from data.tech_indicator import (add_macd, add_moving_averages, add_kdj,
+                                 add_rsi, add_obv, add_vwap,
+                                 add_bollinger_bands, add_atr,
+                                 add_trading_volume)
+from feature.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
-from data.label import one_hot_encoder
+from feature.label import one_hot_encoder
+from data.utils import get_date_back
 from config.config import base_feature
-
-
-def get_stock_df(df_all: pd.DataFrame, stock: str) -> pd.DataFrame:
-    df = df_all[df_all['stock'] == stock]
-    return df
 
 
 # Add columns that calculates the delta w.r.t. previous row for each base feature
@@ -77,13 +73,6 @@ def add_earnings_data(df: pd.DataFrame, ticker: Ticker, start_date: str,
     return df
 
 
-# Helper function to get an shited date
-def get_date_back(date_str: str, delta_days: int) -> str:
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-    date_back = date_obj - timedelta(days=delta_days)
-    return date_back.strftime("%Y-%m-%d")
-
-
 def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
@@ -123,8 +112,7 @@ def download_data(stock_symbol: str,
         df = add_vwap(df)
         df = add_bollinger_bands(df)
         df = add_atr(df)
-        df = add_buy_sell_signals(df)
-        df = add_bullish_bearish_pattern(df)
+        df = add_bullish_bearish_signals(df)
     except Exception:
         raise ValueError(
             f"Technical indicators not available for {stock_symbol}")

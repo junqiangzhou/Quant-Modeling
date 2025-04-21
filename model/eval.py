@@ -1,5 +1,6 @@
-from data.data_fetcher import create_dataset, get_date_back
-from data.label import compute_labels
+from data.data_fetcher import create_dataset
+from data.utils import get_date_back
+from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from model.model import PredictionModel, CustomLoss

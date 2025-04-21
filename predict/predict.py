@@ -1,5 +1,6 @@
 from data.stocks_fetcher import fetch_stocks
-from data.data_fetcher import get_date_back, create_dataset
+from data.data_fetcher import create_dataset
+from data.utils import get_date_back
 from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, label_feature, feature_names)
