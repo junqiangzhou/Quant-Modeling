@@ -1,3 +1,3 @@
 #!/bin/bash
 
-yapf --in-place --recursive .
+python3 -m yapf --in-place --recursive .
