@@ -3,13 +3,14 @@ name: CI
 on:
   push:
     branches:
-      - main  # or 'master' depending on your repo
+      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  test:
+  ci-check:
+    name: CI
     runs-on: ubuntu-latest
 
     steps:
