@@ -1,4 +1,5 @@
-from data.data_fetcher import create_dataset, get_date_back
+from data.data_fetcher import create_dataset
+from data.utils import get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7

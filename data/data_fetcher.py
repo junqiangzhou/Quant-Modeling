@@ -12,6 +12,7 @@ from data.indicator import (add_macd, add_moving_averages, add_kdj, add_rsi,
 from data.buy_sell_signal import add_buy_sell_signals
 from data.stocks_fetcher import fetch_stocks
 from data.label import one_hot_encoder
+from data.utils import get_date_back
 from config.config import base_feature
 
 
@@ -75,13 +76,6 @@ def add_earnings_data(df: pd.DataFrame, ticker: Ticker, start_date: str,
         df[["EPS_Estimate", "EPS_Reported", "Surprise(%)"]] = np.nan
         df['Earnings_Date'] = False
     return df
-
-
-# Helper function to get an shited date
-def get_date_back(date_str: str, delta_days: int) -> str:
-    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-    date_back = date_obj - timedelta(days=delta_days)
-    return date_back.strftime("%Y-%m-%d")
 
 
 def download_data(stock_symbol: str,
