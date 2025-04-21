@@ -14,3 +14,4 @@ gym~=0.26.2
 shimmy~=2.0.0
 xgboost~=2.1.4
 dash~=3.0.3
+pytest~=8.3.5
