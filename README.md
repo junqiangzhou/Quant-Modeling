@@ -2,4 +2,4 @@
 Learn4Growth
 
 
-![CI](https://github.com/junqiangzhou/Quant-Modeling/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/junqiangzhou/Quant-Modeling/actions/workflows/ci.yaml)
