@@ -100,4 +100,4 @@ def update_tables(n):
 
 # Run the app
 if __name__ == "__main__":
-    app.run_server(port=8080, debug=True)
+    app.run(port=8080, debug=True)
