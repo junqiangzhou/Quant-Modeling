@@ -1,29 +1,78 @@
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
+from typing import List
+
+MA_WINDOWS = [5, 10, 20, 50]  # Default moving average windows
 
 
-# Function to compute trading volume:
-def add_trading_volume(df):
+def add_tech_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add technical indicators to the DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame containing 'High', 'Low', 'Close', and 'Volume' price columns.
+        windows (list): List of window sizes for moving averages.
+        Example: [10, 20, 50] for 10-day, 20-day, and 50-day moving averages.
+
+    Returns:
+        pd.DataFrame: DataFrame with technical indicators added.
+    """
+    # Add various technical indicators
+    df = add_trading_volume(df)
+    df = add_moving_averages(df)
+    df = add_macd(df)
+    df = add_kdj(df)
+    df = add_rsi(df)
+    df = add_obv(df)
+    df = add_vwap(df)
+    df = add_bollinger_bands(df)
+    df = add_atr(df)
+
+    return df
+
+
+def add_trading_volume(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute the trading volume and add it to the DataFrame.
+    Parameters:
+        df (pd.DataFrame): DataFrame containing 'High', 'Low', and 'Volume' price columns.
+    Returns:
+        pd.DataFrame: DataFrame with trading volume added.
+    """
     df['Trading_Volume'] = df['Volume'] * (df['High'] + df['Low']) / 2.0
     return df
 
 
-# Function to compute Moving Averages
-def add_moving_averages(df, windows=[10, 20, 50]):
+def add_moving_averages(df: pd.DataFrame,
+                        windows: List[int] = MA_WINDOWS) -> pd.DataFrame:
+    """
+    Compute moving averages and add them to the DataFrame.
+    Parameters:
+        df (pd.DataFrame): DataFrame containing 'Close' price column.
+        windows (list): List of window sizes for moving averages.
+    Returns:
+        pd.DataFrame: DataFrame with moving averages added.
+    """
     for window in windows:
         df[f'MA_{window}'] = df['Close'].rolling(window=window).mean()
     return df
 
 
-# Function to compute MACD
-def add_macd(df):
+def add_macd(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute the MACD indicator and add it to the DataFrame.
+    Parameters:
+        df (pd.DataFrame): DataFrame containing 'Close' price column.
+    Returns:
+        pd.DataFrame: DataFrame with MACD columns added.
+    """
     macd = ta.macd(df['Close'])
     df = df.join(macd)
     return df
 
 
-def add_kdj(df):
+def add_kdj(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute the KDJ indicator and add it to the DataFrame.
 
@@ -45,7 +94,9 @@ def add_kdj(df):
     return df
 
 
-def add_rsi(df, column='Close', period=14):
+def add_rsi(df: pd.DataFrame,
+            column: str = 'Close',
+            period: int = 14) -> pd.DataFrame:
     """
     Add the Relative Strength Index (RSI) for a given DataFrame.
     
@@ -66,8 +117,6 @@ def add_rsi(df, column='Close', period=14):
     # Use exponential moving average (EMA) for stability
     avg_gain = pd.Series(gain).ewm(span=period, min_periods=period).mean()
     avg_loss = pd.Series(loss).ewm(span=period, min_periods=period).mean()
-    # print(avg_gain)
-    # print(avg_loss)
 
     # Compute Relative Strength (RS)
     rs = avg_gain / (avg_loss + 1e-10)  # Avoid division by zero
@@ -81,7 +130,7 @@ def add_rsi(df, column='Close', period=14):
     return df
 
 
-def add_obv(df):
+def add_obv(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add the On-Balance Volume (OBV) for a given DataFrame.
     
@@ -93,7 +142,7 @@ def add_obv(df):
     return df
 
 
-def add_vwap(df):
+def add_vwap(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add the Volume-Weighted Average Price (VWAP) for a given DataFrame.
     
@@ -109,7 +158,9 @@ def add_vwap(df):
     return df
 
 
-def add_bollinger_bands(df, rolling_window=20, num_std=2):
+def add_bollinger_bands(df: pd.DataFrame,
+                        rolling_window: int = 20,
+                        num_std: int = 2) -> pd.DataFrame:
     """
     Add Bollinger Bands to a given DataFrame.
     
@@ -127,7 +178,7 @@ def add_bollinger_bands(df, rolling_window=20, num_std=2):
     return df
 
 
-def add_atr(df, atr_window=14):
+def add_atr(df: pd.DataFrame, atr_window: int = 14) -> pd.DataFrame:
     """
     Add the Average True Range (ATR) for a given DataFrame.
     

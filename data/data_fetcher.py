@@ -5,10 +5,7 @@ import requests
 import time
 from yfinance import Ticker
 
-from data.tech_indicator import (add_macd, add_moving_averages, add_kdj,
-                                 add_rsi, add_obv, add_vwap,
-                                 add_bollinger_bands, add_atr,
-                                 add_trading_volume)
+from data.tech_indicator import add_tech_indicators, MA_WINDOWS
 from feature.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
 from feature.label import one_hot_encoder
@@ -76,7 +73,6 @@ def add_earnings_data(df: pd.DataFrame, ticker: Ticker, start_date: str,
 def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
-                  windows=[5, 10, 20, 50],
                   session=None) -> pd.DataFrame:
     if session is None:
         ticker = Ticker(stock_symbol)
@@ -92,7 +88,7 @@ def download_data(stock_symbol: str,
         print(f"stock {stock_symbol}, market cap: {int(market_cap / 1.0e9)}b")
 
     # We need to look back some time window so that all technical indicators are all valid.
-    shifted_start_date = get_date_back(start_date, windows[-1] + 50)
+    shifted_start_date = get_date_back(start_date, MA_WINDOWS[-1] + 50)
     end_date_inclusive = get_date_back(end_date, -1)
     df = ticker.history(start=shifted_start_date,
                         end=end_date_inclusive,
@@ -103,15 +99,7 @@ def download_data(stock_symbol: str,
 
     # Add technical indicator
     try:
-        df = add_trading_volume(df)
-        df = add_moving_averages(df, windows=windows)
-        df = add_macd(df)
-        df = add_kdj(df)
-        df = add_rsi(df)
-        df = add_obv(df)
-        df = add_vwap(df)
-        df = add_bollinger_bands(df)
-        df = add_atr(df)
+        df = add_tech_indicators(df)
         df = add_bullish_bearish_signals(df)
     except Exception:
         raise ValueError(
