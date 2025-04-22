@@ -68,6 +68,8 @@ def add_macd(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: DataFrame with MACD columns added.
     """
     macd = ta.macd(df['Close'])
+    if macd is None:
+        raise ValueError("MACD calculation failed.")
     df = df.join(macd)
     return df
 
@@ -90,6 +92,8 @@ def add_kdj(df: pd.DataFrame) -> pd.DataFrame:
 
         # Compute J Line: J = 3 * K - 2 * D
         df["J"] = 3 * df["STOCHk_14_3_3"] - 2 * df["STOCHd_14_3_3"]
+    else:
+        raise ValueError("KDJ calculation failed.")
 
     return df
 
@@ -172,6 +176,10 @@ def add_bollinger_bands(df: pd.DataFrame,
     df['BB_Mid'] = df['Close'].rolling(
         window=rolling_window).mean()  # Middle Band
     df['BB_Std'] = df['Close'].rolling(window=rolling_window).std()
+
+    if df['BB_Mid'].isna().all() or df['BB_Std'].isna().all():
+        raise ValueError("NaN values found in Bollinger Bands calculation.")
+
     df['BB_Upper'] = df['BB_Mid'] + (df['BB_Std'] * num_std)  # Upper Band
     df['BB_Lower'] = df['BB_Mid'] - (df['BB_Std'] * num_std)  # Lower Band
 
@@ -192,6 +200,8 @@ def add_atr(df: pd.DataFrame, atr_window: int = 14) -> pd.DataFrame:
     df['TR'] = df[['High-Low', 'High-Close',
                    'Low-Close']].max(axis=1)  # True Range
     df['ATR'] = df['TR'].rolling(window=atr_window).mean()
+    if df['ATR'].isna().all():
+        raise ValueError("NaN values found in ATR calculation.")
     df.drop(columns=['High-Low', 'High-Close', 'Low-Close', 'TR'],
             inplace=True)  # Remove intermediate calculations
     return df
