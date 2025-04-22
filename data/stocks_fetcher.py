@@ -44,7 +44,7 @@ def fetch_stocks():
 
     test_stocks += ETF + BOND + PICKS + CHINA
 
-    # train_stocks, test_stocks = MAG7, TEST_GROUP
+    train_stocks, test_stocks = MAG7, TEST_GROUP
     print(f"# of stocks for training: {len(train_stocks)}")
     print(f"# of stocks for testing: {len(test_stocks)}")
     return train_stocks, test_stocks
