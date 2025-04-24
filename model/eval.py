@@ -189,6 +189,6 @@ if __name__ == "__main__":
             df_all = pd.concat([df_all, df], ignore_index=False)
         count = next_count
 
-    df_all.to_csv(f"./data/stock_testing_2023-01-01_2024-12-31.csv",
+    df_all.to_csv(f"./data/dataset/stock_testing_2023-01-01_2024-12-31.csv",
                   index=True,
                   index_label="Date")

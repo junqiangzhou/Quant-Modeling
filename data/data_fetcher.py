@@ -117,6 +117,7 @@ def preprocess_data(df: pd.DataFrame, stock_symbol: str,
             f"Technical indicators not available for {stock_symbol}")
 
     # Trim data within the interested time window
+    start_date = pd.to_datetime(start_date).tz_localize('UTC')  # convert string to datetime
     df = df.loc[start_date:]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
@@ -134,7 +135,7 @@ def create_dataset(stock_symbol: str,
                    start_date: str,
                    end_date: str,
                    session=None) -> pd.DataFrame:
-    # Download raw data with technical indicators
+    # Download raw data with technical indicatorsd
     df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
@@ -155,7 +156,7 @@ def fetch_raw_training_dataset(stock_symbols: str,
 
         try:
             df = download_data(stock, start_date, end_date, session=session)
-        except Exception as e:
+        except Exception:
             print(f"Error in processing {stock}: {e}")
             continue
         if df is None:
@@ -174,7 +175,10 @@ def fetch_training_dataset(df_raw_data: pd.DataFrame, stock_symbols: str,
                            start_date: str, end_date: str) -> pd.DataFrame:
     df_all = None
     for i, stock in enumerate(stock_symbols):
-        df = get_stock_df(df_raw_data, stock)
+        try:
+            df = get_stock_df(df_raw_data, stock)
+        except Exception as e:
+            continue
         if df is None:
             continue
 
@@ -199,7 +203,7 @@ if __name__ == "__main__":
     print("Generate training data...")
     session = requests.Session()
 
-    csv_file = f"./data/stock_training_{start_date}_{end_date}_raw_data.csv"
+    csv_file = f"./data/dataset/stock_training_{start_date}_{end_date}_raw_data.csv"
     if not os.path.exists(csv_file):
         fetch_raw_training_dataset(stock_symbols=training_stocks,
                                    start_date=start_date,
@@ -208,13 +212,13 @@ if __name__ == "__main__":
                                    session=None)
 
     df_raw_data = pd.read_csv(csv_file)
-    df_raw_data['Date'] = pd.to_datetime(df_raw_data['Date'])
     df_raw_data.set_index('Date', inplace=True)
+    df_raw_data.index = pd.to_datetime(df_raw_data.index, utc=True)
     df_all = fetch_training_dataset(df_raw_data=df_raw_data,
                                     stock_symbols=training_stocks,
                                     start_date=start_date,
                                     end_date=end_date)
     print("total # of training data points: ", df_all.shape[0])
-    df_all.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
+    df_all.to_csv(f"./data/dataset/stock_training_{start_date}_{end_date}.csv",
                   index=True,
                   index_label="Date")
