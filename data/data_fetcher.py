@@ -4,7 +4,6 @@ import numpy as np
 import requests
 import time
 import os
-import bisect
 from yfinance import Ticker
 
 from data.tech_indicator import add_tech_indicators, MA_WINDOWS
@@ -136,7 +135,7 @@ def create_dataset(stock_symbol: str,
                    start_date: str,
                    end_date: str,
                    session=None) -> pd.DataFrame:
-    # Download raw data with technical indicatorsd
+    # Download raw data with technical indicators
     df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
