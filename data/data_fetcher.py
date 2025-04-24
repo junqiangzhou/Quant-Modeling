@@ -193,28 +193,28 @@ if __name__ == "__main__":
     end_date = "2025-03-31"
     viz = False
 
-    # training_stocks, _ = fetch_stocks()
-    # print("# of stocks: ", len(training_stocks))
-    # # Generate training data
-    # print("Generate training data...")
-    # session = requests.Session()
+    training_stocks, _ = fetch_stocks()
+    print("# of stocks: ", len(training_stocks))
+    # Generate training data
+    print("Generate training data...")
+    session = requests.Session()
 
-    # csv_file = f"./data/stock_training_{start_date}_{end_date}_raw_data.csv"
-    # if not os.path.exists(csv_file):
-    #     fetch_raw_training_dataset(stock_symbols=training_stocks,
-    #                                start_date=start_date,
-    #                                end_date=end_date,
-    #                                csv_file=csv_file,
-    #                                session=None)
+    csv_file = f"./data/stock_training_{start_date}_{end_date}_raw_data.csv"
+    if not os.path.exists(csv_file):
+        fetch_raw_training_dataset(stock_symbols=training_stocks,
+                                   start_date=start_date,
+                                   end_date=end_date,
+                                   csv_file=csv_file,
+                                   session=None)
 
-    # df_raw_data = pd.read_csv(csv_file)
-    # df_raw_data['Date'] = pd.to_datetime(df_raw_data['Date'])
-    # df_raw_data.set_index('Date', inplace=True)
-    # df_all = fetch_training_dataset(df_raw_data=df_raw_data,
-    #                                 stock_symbols=training_stocks,
-    #                                 start_date=start_date,
-    #                                 end_date=end_date)
-    # print("total # of training data points: ", df_all.shape[0])
-    # df_all.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
-    #               index=True,
-    #               index_label="Date")
+    df_raw_data = pd.read_csv(csv_file)
+    df_raw_data['Date'] = pd.to_datetime(df_raw_data['Date'])
+    df_raw_data.set_index('Date', inplace=True)
+    df_all = fetch_training_dataset(df_raw_data=df_raw_data,
+                                    stock_symbols=training_stocks,
+                                    start_date=start_date,
+                                    end_date=end_date)
+    print("total # of training data points: ", df_all.shape[0])
+    df_all.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
+                  index=True,
+                  index_label="Date")
