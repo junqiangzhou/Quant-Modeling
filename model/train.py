@@ -259,7 +259,9 @@ def train_xgboost_model(train_loader: DataLoader) -> XGBoostClassifier:
 
 
 if __name__ == "__main__":
-    csv_file = "data/dataset/stock_training_2023-01-01_2024-12-31.csv"
+    start_date = "2023-04-01"
+    end_date = "2025-03-31"
+    csv_file = f"./data/dataset/stock_training_{start_date}_{end_date}.csv"
     if not os.path.exists(csv_file):
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")

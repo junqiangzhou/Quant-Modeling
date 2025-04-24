@@ -117,7 +117,8 @@ def preprocess_data(df: pd.DataFrame, stock_symbol: str,
             f"Technical indicators not available for {stock_symbol}")
 
     # Trim data within the interested time window
-    start_date = pd.to_datetime(start_date).tz_localize('UTC')  # convert string to datetime
+    start_date = pd.to_datetime(start_date).tz_localize(
+        'UTC')  # convert string to datetime
     df = df.loc[start_date:]
     # Add columns with normalized data
     df = add_delta_from_prev_row(df)
