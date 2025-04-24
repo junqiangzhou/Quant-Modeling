@@ -6,7 +6,7 @@ import time
 from yfinance import Ticker
 
 from data.tech_indicator import add_tech_indicators, MA_WINDOWS
-from feature.trend_indicator import add_bullish_bearish_signals
+from data.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
 from feature.label import one_hot_encoder
 from data.utils import get_date_back
@@ -93,9 +93,16 @@ def download_data(stock_symbol: str,
     df = ticker.history(start=shifted_start_date,
                         end=end_date_inclusive,
                         interval="1d")
+
+    df = add_earnings_data(df, ticker, start_date, end_date_inclusive)
+    # Add a column for stock symbol
+    df["stock"] = stock_symbol
+    return df
+
+
+def preprocess_data(df: pd.DataFrame, stock_symbol: str, start_date: str) -> pd.DataFrame:
     # Truncate to first 2 decimal digits (without rounding)
-    df = df.applymap(lambda x: int(x * 100) / 100
-                     if isinstance(x, float) else x)
+    df = df.applymap(lambda x: int(x * 100) / 100 if isinstance(x, float) and pd.notnull(x) else x)
 
     # Add technical indicator
     try:
@@ -112,11 +119,12 @@ def download_data(stock_symbol: str,
     df = add_daily_change(df)
     # df = add_detla_from_date(df, df.index[0])
 
-    df = add_earnings_data(df, ticker, start_date, end_date_inclusive)
-    # Add a column for stock symbol
-    df["stock"] = stock_symbol
-    return df
+    df = one_hot_encoder(df)
+    # Reformat the index to be just days
+    df.index = df.index.date
 
+    return df
+    
 
 def create_dataset(stock_symbol: str,
                    start_date: str,
@@ -126,10 +134,8 @@ def create_dataset(stock_symbol: str,
     df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
+    df = preprocess_data(df, stock_symbol, start_date)
 
-    df = one_hot_encoder(df)
-    # Reformat the index to be just days
-    df.index = df.index.date
     return df
 
 
