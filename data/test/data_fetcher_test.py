@@ -3,10 +3,12 @@ import pandas as pd
 import pytest
 from data.data_fetcher import fetch_stocks, create_dataset
 
+
 @pytest.fixture
 def mock_fetch_stocks():
     # Mock fetch_stocks to return a small list of stock symbols
     return ["AAPL", "MSFT"]
+
 
 def test_main_integration(mock_fetch_stocks):
     # Use only mock_fetch_stocks as the dependency
@@ -25,10 +27,10 @@ def test_main_integration(mock_fetch_stocks):
 
     # Verify the content of the output file
     output_df.to_csv(f"./data/test/test_{start_date}_{end_date}.csv",
-                  index=True,
-                  index_label="Date")
+                     index=True,
+                     index_label="Date")
     assert not output_df.empty
     assert len(output_df["stock"].unique()) == 2  # Two stocks: AAPL and MSFT
-    assert len(output_df) == 124  # Number of days between start_date and end_date
+    assert len(
+        output_df) == 124  # Number of days between start_date and end_date
     assert len(output_df.columns) == 68
-

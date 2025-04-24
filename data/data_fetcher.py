@@ -3,13 +3,15 @@ import pandas as pd
 import numpy as np
 import requests
 import time
+import os
+import bisect
 from yfinance import Ticker
 
 from data.tech_indicator import add_tech_indicators, MA_WINDOWS
 from data.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
 from feature.label import one_hot_encoder
-from data.utils import get_date_back
+from data.utils import get_date_back, get_stock_df
 from config.config import base_feature
 
 
@@ -100,9 +102,11 @@ def download_data(stock_symbol: str,
     return df
 
 
-def preprocess_data(df: pd.DataFrame, stock_symbol: str, start_date: str) -> pd.DataFrame:
+def preprocess_data(df: pd.DataFrame, stock_symbol: str,
+                    start_date: str) -> pd.DataFrame:
     # Truncate to first 2 decimal digits (without rounding)
-    df = df.applymap(lambda x: int(x * 100) / 100 if isinstance(x, float) and pd.notnull(x) else x)
+    df = df.applymap(lambda x: int(x * 100) / 100
+                     if isinstance(x, float) and pd.notnull(x) else x)
 
     # Add technical indicator
     try:
@@ -124,7 +128,7 @@ def preprocess_data(df: pd.DataFrame, stock_symbol: str, start_date: str) -> pd.
     df.index = df.index.date
 
     return df
-    
+
 
 def create_dataset(stock_symbol: str,
                    start_date: str,
@@ -134,46 +138,83 @@ def create_dataset(stock_symbol: str,
     df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
-    df_raw = df.copy()
     df = preprocess_data(df, stock_symbol, start_date)
 
-    return df, df_raw
+    return df
 
 
-if __name__ == "__main__":
-    start_date = "2023-01-01"
-    end_date = "2024-12-31"
-    viz = False
-
-    training_stocks, _ = fetch_stocks()
-    print("# of stocks: ", len(training_stocks))
-    # Generate training data
-    print("Generate training data...")
-    all_df, all_df_raw = None, None
-    session = requests.Session()
-    for i, stock in enumerate(training_stocks):
-        # print(">>>>>>stock: ", stock)
+def fetch_raw_training_dataset(stock_symbols: str,
+                               start_date: str,
+                               end_date: str,
+                               csv_file: str,
+                               session=None) -> pd.DataFrame:
+    df_all = None
+    for i, stock in enumerate(stock_symbols):
         if i >= 100 and i % 100 == 0:
             time.sleep(60)
 
         try:
-            df, df_raw = create_dataset(stock, start_date, end_date, session=session)
+            df = download_data(stock, start_date, end_date, session=session)
         except Exception as e:
             print(f"Error in processing {stock}: {e}")
             continue
         if df is None:
             continue
 
-        if all_df is None:
-            all_df = df
-            all_df_raw = df_raw
+        if df_all is None:
+            df_all = df
         else:
-            all_df = pd.concat([all_df, df], ignore_index=False)
-            all_df_raw = pd.concat([all_df_raw, df_raw], ignore_index=False)
-    print("total # of training data points: ", all_df.shape[0])
-    all_df.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
-                  index=True,
-                  index_label="Date")
-    all_df_raw.to_csv(f"./data/stock_training_{start_date}_{end_date}_raw_data.csv",
-                  index=True,
-                  index_label="Date")
+            df_all = pd.concat([df_all, df], ignore_index=False)
+    print("total # of training data points: ", df_all.shape[0])
+    df_all.to_csv(csv_file, index=True, index_label="Date")
+    return
+
+
+def fetch_training_dataset(df_raw_data: pd.DataFrame, stock_symbols: str,
+                           start_date: str, end_date: str) -> pd.DataFrame:
+    df_all = None
+    for i, stock in enumerate(stock_symbols):
+        df = get_stock_df(df_raw_data, stock)
+        if df is None:
+            continue
+
+        df = preprocess_data(df, stock, start_date)
+
+        if df_all is None:
+            df_all = df
+        else:
+            df_all = pd.concat([df_all, df], ignore_index=False)
+
+    return df_all
+
+
+if __name__ == "__main__":
+    start_date = "2023-04-01"
+    end_date = "2025-03-31"
+    viz = False
+
+    # training_stocks, _ = fetch_stocks()
+    # print("# of stocks: ", len(training_stocks))
+    # # Generate training data
+    # print("Generate training data...")
+    # session = requests.Session()
+
+    # csv_file = f"./data/stock_training_{start_date}_{end_date}_raw_data.csv"
+    # if not os.path.exists(csv_file):
+    #     fetch_raw_training_dataset(stock_symbols=training_stocks,
+    #                                start_date=start_date,
+    #                                end_date=end_date,
+    #                                csv_file=csv_file,
+    #                                session=None)
+
+    # df_raw_data = pd.read_csv(csv_file)
+    # df_raw_data['Date'] = pd.to_datetime(df_raw_data['Date'])
+    # df_raw_data.set_index('Date', inplace=True)
+    # df_all = fetch_training_dataset(df_raw_data=df_raw_data,
+    #                                 stock_symbols=training_stocks,
+    #                                 start_date=start_date,
+    #                                 end_date=end_date)
+    # print("total # of training data points: ", df_all.shape[0])
+    # df_all.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
+    #               index=True,
+    #               index_label="Date")
