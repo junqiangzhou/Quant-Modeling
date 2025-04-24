@@ -4,7 +4,7 @@ from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from model.model import PredictionModel, CustomLoss
-from config.config import (ENCODER_TYPE, device, look_back_window,
+from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, device, look_back_window,
                            label_feature, buy_sell_signals, feature_names)
 from data.stocks_fetcher import MAG7, PICKS
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     model = PredictionModel(feature_len=all_features.shape[2],
                             seq_len=all_features.shape[1],
                             encoder_type=ENCODER_TYPE).to(device)
-    model.load_state_dict(torch.load('./model/model.pth'))
+    model.load_state_dict(torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
     model.eval()
     criterion = CustomLoss()
 

@@ -3,7 +3,7 @@ from data.data_fetcher import create_dataset
 from data.utils import get_date_back
 from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
-from config.config import (ENCODER_TYPE, label_feature, feature_names)
+from config.config import (ENCODER_TYPE, label_feature, feature_names, MODEL_EXPORT_NAME)
 
 from datetime import date
 import numpy as np
@@ -22,7 +22,7 @@ session = requests.Session()
 model = PredictionModel(feature_len=len(feature_names),
                         seq_len=look_back_window,
                         encoder_type=ENCODER_TYPE)
-model.load_state_dict(torch.load('./model/model.pth'))
+model.load_state_dict(torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
 model.eval()
 
 # Initialize

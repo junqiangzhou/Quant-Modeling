@@ -3,7 +3,7 @@ from data.utils import get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7
-from config.config import (ENCODER_TYPE, Action, random_seed, label_feature,
+from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action, random_seed, label_feature,
                            buy_sell_signals, look_back_window, feature_names)
 
 from typing import List
@@ -43,7 +43,7 @@ class BacktestSystem:
         self.model = PredictionModel(feature_len=len(feature_names),
                                      seq_len=look_back_window,
                                      encoder_type=ENCODER_TYPE)
-        self.model.load_state_dict(torch.load('./model/model.pth'))
+        self.model.load_state_dict(torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
         self.model.eval()
 
         self.init_fund = init_fund

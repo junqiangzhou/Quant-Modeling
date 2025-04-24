@@ -8,7 +8,7 @@ from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
 from config.config import (ModelType, ENCODER_TYPE, MODEL_TYPE, device,
-                           random_seed, label_feature)
+                           random_seed, label_feature, MODEL_EXPORT_NAME)
 from model.model import PredictionModel, CustomLoss, XGBoostClassifier
 from model.eval import eval_model, eval_xgboost_model
 
@@ -318,4 +318,4 @@ if __name__ == "__main__":
             model, test_dataset)
 
     if MODEL_TYPE == ModelType.TORCH:
-        torch.save(model.state_dict(), './model/model.pth')
+        torch.save(model.state_dict(), f"./model/export/{MODEL_EXPORT_NAME}.pth")
