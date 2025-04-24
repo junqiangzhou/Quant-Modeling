@@ -134,9 +134,10 @@ def create_dataset(stock_symbol: str,
     df = download_data(stock_symbol, start_date, end_date, session=session)
     if df is None:
         return None
+    df_raw = df.copy()
     df = preprocess_data(df, stock_symbol, start_date)
 
-    return df
+    return df, df_raw
 
 
 if __name__ == "__main__":
@@ -148,7 +149,7 @@ if __name__ == "__main__":
     print("# of stocks: ", len(training_stocks))
     # Generate training data
     print("Generate training data...")
-    all_df = None
+    all_df, all_df_raw = None, None
     session = requests.Session()
     for i, stock in enumerate(training_stocks):
         # print(">>>>>>stock: ", stock)
@@ -156,7 +157,7 @@ if __name__ == "__main__":
             time.sleep(60)
 
         try:
-            df = create_dataset(stock, start_date, end_date, session=session)
+            df, df_raw = create_dataset(stock, start_date, end_date, session=session)
         except Exception as e:
             print(f"Error in processing {stock}: {e}")
             continue
@@ -165,9 +166,14 @@ if __name__ == "__main__":
 
         if all_df is None:
             all_df = df
+            all_df_raw = df_raw
         else:
             all_df = pd.concat([all_df, df], ignore_index=False)
+            all_df_raw = pd.concat([all_df_raw, df_raw], ignore_index=False)
     print("total # of training data points: ", all_df.shape[0])
     all_df.to_csv(f"./data/stock_training_{start_date}_{end_date}.csv",
+                  index=True,
+                  index_label="Date")
+    all_df_raw.to_csv(f"./data/stock_training_{start_date}_{end_date}_raw_data.csv",
                   index=True,
                   index_label="Date")
