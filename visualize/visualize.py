@@ -92,7 +92,7 @@ def visualize_dataset(df: pd.DataFrame,
 
 
 if __name__ == "__main__":
-    csv_file = "data/stock_testing_2023-01-01_2024-12-31.csv"
+    csv_file = "data/dataset/stock_testing_2023-01-01_2024-12-31.csv"
     if not os.path.exists(csv_file):
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")
