@@ -3,7 +3,7 @@ from data.utils import get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, Action, feature_names,
-                           look_back_window, label_feature)
+                           look_back_window, label_feature, MODEL_EXPORT_NAME)
 
 import gymnasium as gym
 import numpy as np
@@ -33,7 +33,8 @@ class StockTradingEnv(gym.Env):
         self.prediction_model = PredictionModel(feature_len=len(feature_names),
                                                 seq_len=look_back_window,
                                                 encoder_type=ENCODER_TYPE)
-        self.prediction_model.load_state_dict(torch.load('./model/model.pth'))
+        self.prediction_model.load_state_dict(
+            torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
         self.prediction_model.eval()
 
         self.init_balance = init_fund

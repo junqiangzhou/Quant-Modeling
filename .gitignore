@@ -2,8 +2,8 @@
 # !predict/data/*.csv
 
 .DS_Store
-*.pth
-./model/*.pth
+# *.pth
+# ./model/*.pth
 *.zip
 **/__pycache__/*
 **/.ipynb_checkpoints/*

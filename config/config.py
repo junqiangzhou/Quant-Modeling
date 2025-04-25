@@ -2,8 +2,13 @@ import torch
 from enum import Enum
 from itertools import chain
 
+# The name of the model to be exported and loaded
+# The model is saved in the model directory
+MODEL_EXPORT_NAME = "model_cpu_v1"
+
 # device config
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 
 # Define the model type for encoder
