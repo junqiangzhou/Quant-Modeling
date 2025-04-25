@@ -2,8 +2,9 @@ import pandas as pd
 import pandas_ta as ta
 import numpy as np
 from typing import List
+from datetime import datetime
 
-MA_WINDOWS = [5, 10, 20, 50]  # Default moving average windows
+from config.config import base_feature, MA_WINDOWS
 
 
 def add_tech_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -28,6 +29,12 @@ def add_tech_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df = add_vwap(df)
     df = add_bollinger_bands(df)
     df = add_atr(df)
+
+    # Add delta values that don't depend on the absolute scale of the price
+    df = add_daily_change(df)
+    # Add columns with normalized data
+    df = add_delta_from_prev_row(df)
+    # df = add_detla_from_date(df, df.index[0])
 
     return df
 
@@ -204,4 +211,33 @@ def add_atr(df: pd.DataFrame, atr_window: int = 14) -> pd.DataFrame:
         raise ValueError("NaN values found in ATR calculation.")
     df.drop(columns=['High-Low', 'High-Close', 'Low-Close', 'TR'],
             inplace=True)  # Remove intermediate calculations
+    return df
+
+
+def add_daily_change(df: pd.DataFrame) -> pd.DataFrame:
+    df["daily_change"] = (df["Close"] - df["Open"]) / df["Open"]
+    return df
+
+
+# Add columns that calculates the delta w.r.t. previous row for each base feature
+# This normalizes data by calculating the percentage change
+# Returns updated dataframe
+def add_delta_from_prev_row(df: pd.DataFrame) -> pd.DataFrame:
+    df_columns = df[base_feature]
+    df_prev_row_diff = df_columns.pct_change()
+    df_prev_row_diff.columns = [name + "_diff" for name in df_columns.columns]
+    df = df.join(df_prev_row_diff, how='left')
+    return df
+
+
+# Add columns that calculates the delta w.r.t a given row for each base feature
+# This normalizes the data against given date
+# Returns updated dataframe
+def add_detla_from_date(df: pd.DataFrame, date: datetime) -> pd.DataFrame:
+    df_columns = df[base_feature]
+    row = df.index.get_loc(date)
+
+    df_row0_diff = (df_columns - df_columns.iloc[row]) / df_columns.iloc[row]
+    df_row0_diff.columns = [name + "_start" for name in df_columns.columns]
+    df = df.join(df_row0_diff, how='left')
     return df

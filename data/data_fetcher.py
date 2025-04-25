@@ -1,4 +1,3 @@
-from datetime import datetime
 import pandas as pd
 import numpy as np
 import requests
@@ -9,38 +8,7 @@ from yfinance import Ticker
 from data.tech_indicator import add_tech_indicators, MA_WINDOWS
 from data.trend_indicator import add_bullish_bearish_signals
 from data.stocks_fetcher import fetch_stocks
-from feature.label import one_hot_encoder
-from data.utils import get_date_back, get_stock_df
-from config.config import base_feature
-
-
-# Add columns that calculates the delta w.r.t. previous row for each base feature
-# This normalizes data by calculating the percentage change
-# Returns updated dataframe
-def add_delta_from_prev_row(df: pd.DataFrame) -> pd.DataFrame:
-    df_columns = df[base_feature]
-    df_prev_row_diff = df_columns.pct_change()
-    df_prev_row_diff.columns = [name + "_diff" for name in df_columns.columns]
-    df = df.join(df_prev_row_diff, how='left')
-    return df
-
-
-# Add columns that calculates the delta w.r.t a given row for each base feature
-# This normalizes the data against given date
-# Returns updated dataframe
-def add_detla_from_date(df: pd.DataFrame, date: datetime) -> pd.DataFrame:
-    df_columns = df[base_feature]
-    row = df.index.get_loc(date)
-
-    df_row0_diff = (df_columns - df_columns.iloc[row]) / df_columns.iloc[row]
-    df_row0_diff.columns = [name + "_start" for name in df_columns.columns]
-    df = df.join(df_row0_diff, how='left')
-    return df
-
-
-def add_daily_change(df: pd.DataFrame) -> pd.DataFrame:
-    df["daily_change"] = (df["Close"] - df["Open"]) / df["Open"]
-    return df
+from data.utils import get_date_back, get_stock_df, one_hot_encoder
 
 
 # Add earnings information to the dataframe
@@ -119,10 +87,6 @@ def preprocess_data(df: pd.DataFrame, stock_symbol: str,
     start_date = pd.to_datetime(start_date).tz_localize(
         'UTC')  # convert string to datetime
     df = df.loc[start_date:]
-    # Add columns with normalized data
-    df = add_delta_from_prev_row(df)
-    df = add_daily_change(df)
-    # df = add_detla_from_date(df, df.index[0])
 
     df = one_hot_encoder(df)
     # Reformat the index to be just days
