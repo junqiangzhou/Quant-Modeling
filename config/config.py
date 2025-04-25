@@ -46,6 +46,9 @@ look_back_window = 50
 # future time window where the labels are calculated at training and predicted at inference time
 future_time_windows = [5, 10, 20, 30]  # number of next rows to consider
 
+# Default moving average windows
+MA_WINDOWS = [5, 10, 20, 50]
+
 # List of basic data downloaded from Yahoo Finance
 base_feature = [
     'Open',

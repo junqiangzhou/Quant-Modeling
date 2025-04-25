@@ -4,22 +4,7 @@ from datetime import timedelta
 
 from data.utils import perc_change, days_diff
 from config.config import (future_time_windows, label_columns,
-                           buy_sell_signals, buy_sell_signals_encoded)
-
-
-def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
-    # one-hot encoding on buy_sell_signals
-    df_dummies = pd.get_dummies(df,
-                                columns=buy_sell_signals,
-                                prefix={col: col
-                                        for col in buy_sell_signals})
-    # Fill missing category with 0s.
-    for col in buy_sell_signals_encoded:
-        if col not in df_dummies.columns:
-            df_dummies[col] = 0
-
-    df = df.join(df_dummies[buy_sell_signals_encoded])
-    return df
+                           buy_sell_signals)
 
 
 # Computes the labels, and here's the basic idea:
