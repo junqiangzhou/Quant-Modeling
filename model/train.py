@@ -318,4 +318,5 @@ if __name__ == "__main__":
             model, test_dataset)
 
     if MODEL_TYPE == ModelType.TORCH:
-        torch.save(model.state_dict(), f"./model/export/{MODEL_EXPORT_NAME}.pth")
+        torch.save(model.state_dict(),
+                   f"./model/export/{MODEL_EXPORT_NAME}.pth")

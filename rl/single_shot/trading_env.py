@@ -33,7 +33,8 @@ class StockTradingEnv(gym.Env):
         self.prediction_model = PredictionModel(feature_len=len(feature_names),
                                                 seq_len=look_back_window,
                                                 encoder_type=ENCODER_TYPE)
-        self.prediction_model.load_state_dict(torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
+        self.prediction_model.load_state_dict(
+            torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
         self.prediction_model.eval()
 
         self.init_balance = init_fund

@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import pytest
 from data.data_fetcher import fetch_stocks, create_dataset

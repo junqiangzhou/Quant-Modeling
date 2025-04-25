@@ -3,7 +3,8 @@ from data.data_fetcher import create_dataset
 from data.utils import get_date_back
 from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
-from config.config import (ENCODER_TYPE, label_feature, feature_names, MODEL_EXPORT_NAME)
+from config.config import (ENCODER_TYPE, label_feature, feature_names,
+                           MODEL_EXPORT_NAME)
 
 from datetime import date
 import numpy as np
