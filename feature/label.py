@@ -3,8 +3,40 @@ import numpy as np
 from datetime import timedelta
 
 from data.utils import perc_change, days_diff
-from config.config import (future_time_windows, label_columns,
+from config.config import (future_time_windows, label_debug_columns,
                            buy_sell_signals)
+
+
+def is_stock_trending_up(curr_close, max_close, max_index, min_close,
+                         min_index, up_perc_threshold, down_perc_threshold):
+    if min_close > curr_close:  # straight up
+        return True
+    # max exceeds up threshold, and min stays below down threshold
+    if perc_change(curr_close, max_close) > up_perc_threshold and perc_change(
+            curr_close, min_close) > down_perc_threshold:
+        return True
+    # max exceeds up threshold, and min exceeds down threshold, but max comes before min
+    if perc_change(curr_close, max_close) > up_perc_threshold and perc_change(
+            curr_close,
+            min_close) < down_perc_threshold and max_index < min_index:
+        return True
+    return False
+
+
+def is_stock_trending_down(curr_close, max_close, max_index, min_close,
+                           min_index, up_perc_threshold, down_perc_threshold):
+    if max_close < curr_close:  # straight down
+        return True
+    # min exceeds down threshold, and max stays below up threshold
+    if perc_change(curr_close, max_close) < up_perc_threshold and perc_change(
+            curr_close, min_close) < down_perc_threshold:
+        return True
+    # min exceeds down threshold, and max exceeds up threshold, but min comes before max
+    if perc_change(curr_close, max_close) > up_perc_threshold and perc_change(
+            curr_close,
+            min_close) < down_perc_threshold and min_index < max_index:
+        return True
+    return False
 
 
 # Computes the labels, and here's the basic idea:
@@ -18,7 +50,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
-    labels = pd.DataFrame(np.nan, columns=label_columns, index=df.index)
+    labels = pd.DataFrame(np.nan, columns=label_debug_columns, index=df.index)
     while curr_date < df.index[-1]:
         # print(f"Quarter bewteen: {curr_date} and {next_date}")
         # (???) somehow the earnings date is 1day ahead, so I need to start from index 2 here.
@@ -56,47 +88,12 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                 ), next_rows["Close"].idxmin()
 
                 # print(f"Date: {curr_index}, Close: {curr_close}, Max Date: {max_index}, Close: {max_close}, Min Date: {min_index}, Close: {min_close},")
-                def is_stock_trending_up(curr_close, max_close, max_index,
-                                         min_close, min_index):
-                    if min_close > curr_close:  # straight up
-                        return True
-                    # max exceeds up threshold, and min stays below down threshold
-                    if perc_change(
-                            curr_close,
-                            max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close) > down_perc_threshold:
-                        return True
-                    # max exceeds up threshold, and min exceeds down threshold, but max comes before min
-                    if perc_change(
-                            curr_close,
-                            max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close
-                            ) < down_perc_threshold and max_index < min_index:
-                        return True
-                    return False
-
-                def is_stock_trending_down(curr_close, max_close, max_index,
-                                           min_close, min_index):
-                    if max_close < curr_close:  # straight down
-                        return True
-                    # min exceeds down threshold, and max stays below up threshold
-                    if perc_change(
-                            curr_close,
-                            max_close) < up_perc_threshold and perc_change(
-                                curr_close, min_close) < down_perc_threshold:
-                        return True
-                    # min exceeds down threshold, and max exceeds up threshold, but min comes before max
-                    if perc_change(
-                            curr_close,
-                            max_close) > up_perc_threshold and perc_change(
-                                curr_close, min_close
-                            ) < down_perc_threshold and min_index < max_index:
-                        return True
-                    return False
 
                 trend = 0
                 if is_stock_trending_up(curr_close, max_close, max_index,
-                                        min_close, min_index):
+                                        min_close, min_index,
+                                        up_perc_threshold,
+                                        down_perc_threshold):
                     if any(buy_sell_signals_vals == 1) and bullish_signal == 1:
                         trend = 1  # 1 - trend up
                         # print(
@@ -106,7 +103,9 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                     # print(f"No indicator for buy signal, {curr_index.date().strftime('%Y-%m-%d')}")
                     # print(f"Date: {curr_index}, Close: {curr_close}, >>>>>Up: Percent {(max_close - curr_close) / curr_close * 100}, Length {max_index - curr_index}")
                 elif is_stock_trending_down(curr_close, max_close, max_index,
-                                            min_close, min_index):
+                                            min_close, min_index,
+                                            up_perc_threshold,
+                                            down_perc_threshold):
                     if any(buy_sell_signals_vals ==
                            -1) and bearish_signal == 1:
                         # print(

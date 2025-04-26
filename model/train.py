@@ -8,7 +8,7 @@ from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
 from config.config import (ModelType, ENCODER_TYPE, MODEL_TYPE, device,
-                           random_seed, label_feature, MODEL_EXPORT_NAME)
+                           random_seed, label_names, MODEL_EXPORT_NAME)
 from model.model import PredictionModel, CustomLoss, XGBoostClassifier
 from model.eval import eval_model, eval_xgboost_model
 
@@ -77,7 +77,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
 
     # Count the occurrences of each combination
     combination_counts = Counter(y_combinations)
-    zero_label = (0.0, ) * len(label_feature)
+    zero_label = (0.0, ) * len(label_names)
     freq_sum = sum(
         [v for k, v in combination_counts.items() if k != zero_label])
     freq_zero = combination_counts[zero_label]
@@ -237,7 +237,7 @@ def train_model(train_loader: DataLoader,
 
 def train_xgboost_model(train_loader: DataLoader) -> XGBoostClassifier:
 
-    model = XGBoostClassifier(num_classes=len(label_feature))
+    model = XGBoostClassifier(num_classes=len(label_names))
 
     # Train xGBoost
     X_train, y_train = None, None

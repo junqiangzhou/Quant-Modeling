@@ -1,7 +1,7 @@
 from data.data_fetcher import create_dataset
 from data.utils import get_date_back
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, device,
-                           look_back_window, label_feature, buy_sell_signals,
+                           look_back_window, label_names, buy_sell_signals,
                            feature_names)
 from feature.label import compute_labels
 from feature.feature import create_batch_feature
@@ -78,9 +78,9 @@ def test_model_integration(mock_fetch_stocks):
     assert len(predict_labels) == len(
         test_dataset), "Prediction labels length mismatch"
     assert predict_probs.shape[1] == len(
-        label_feature) * 3, "Prediction probabilities shape mismatch"
+        label_names) * 3, "Prediction probabilities shape mismatch"
     assert predict_labels.shape[1] == len(
-        label_feature), "Prediction labels shape mismatch"
+        label_names), "Prediction labels shape mismatch"
 
     assert all(np.isin(predict_labels.flatten(),
                        [0, 1, 2])), "Prediction labels should be in {0, 1, 2}"

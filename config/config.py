@@ -95,12 +95,12 @@ feature_names = [
 ] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals + other_features
 
 # classification labels for model to predict
-label_feature = list(
+label_names = list(
     chain(*[[f"trend_{time}days"] for time in future_time_windows]))
 
 # all columns added for debugging labeling
 # [max_close, max_duration, min_close, min_duration, trend_Xdays]
-label_columns = list(
+label_debug_columns = list(
     chain(*[[
         f"{time}days_max_close", f"{time}days_max_duration",
         f"{time}days_min_close", f"{time}days_min_duration",

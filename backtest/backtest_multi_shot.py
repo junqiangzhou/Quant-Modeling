@@ -1,6 +1,6 @@
 from rl.multi_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
-from config.config import Action, label_feature, buy_sell_signals
+from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
 
 from numpy.typing import NDArray
@@ -28,7 +28,7 @@ class BacktestSingleShot(StockTradingEnv):
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
-                    label_feature
+                    label_names
             ) and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
 
@@ -40,7 +40,7 @@ class BacktestSingleShot(StockTradingEnv):
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
-                    label_feature
+                    label_names
             ) and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
 
@@ -81,7 +81,7 @@ class BacktestSingleShot(StockTradingEnv):
 
             with torch.no_grad():
                 logits = self.prediction_model(features_tensor)
-                logits = logits.reshape(len(label_feature), 3)
+                logits = logits.reshape(len(label_names), 3)
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
@@ -111,7 +111,7 @@ class BacktestSingleShot(StockTradingEnv):
 
                 with torch.no_grad():
                     logits = self.prediction_model(features_tensor)
-                    logits = logits.reshape(len(label_feature), 3)
+                    logits = logits.reshape(len(label_names), 3)
                     probs = torch.softmax(logits, dim=1).float().numpy(
                     )  # convert logits to probabilities
                     if probs[0, 1] > max_5day_buy_prob:

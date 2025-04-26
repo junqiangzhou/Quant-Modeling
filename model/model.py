@@ -1,5 +1,5 @@
 from model.utils import PositionalEncoding, AttentionPooling
-from config.config import EncoderType, device, label_feature
+from config.config import EncoderType, device, label_names
 
 import torch
 import torch.nn as nn
@@ -253,7 +253,7 @@ class MultiTaskClassifier(nn.Module):
                                 )  # Normalizes across feature dimensions
         self.dropout = nn.Dropout(p=0.1)  # 10% Dropout
         self.out = nn.Linear(MULTI_TASK_DECODER_HIDDEN_DIM,
-                             3 * len(label_feature))
+                             3 * len(label_names))
 
     def forward(self, x):
         x = F.relu(self.ln1(self.fc1(x)))
@@ -310,7 +310,7 @@ class CustomLoss(nn.Module):
 
     def forward(self, logits, targets):
         # logits shape: (batch_size, 3 * num_labels)
-        num_labels = len(label_feature)
+        num_labels = len(label_names)
         batch_size = logits.shape[0]
         logits = logits.reshape(batch_size * num_labels, 3)
 

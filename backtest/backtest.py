@@ -4,7 +4,7 @@ from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
-                           random_seed, label_feature, buy_sell_signals,
+                           random_seed, label_names, buy_sell_signals,
                            look_back_window, feature_names)
 
 from typing import List
@@ -93,7 +93,7 @@ class BacktestSystem:
                                                           "Price_Below_MA_5"]
         with torch.no_grad():
             logits = self.model(features_tensor)
-            logits = logits.reshape(len(label_feature), 3)
+            logits = logits.reshape(len(label_names), 3)
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
@@ -103,7 +103,7 @@ class BacktestSystem:
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
-                    label_feature
+                    label_names
             ) and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
 
@@ -114,7 +114,7 @@ class BacktestSystem:
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
-                    label_feature
+                    label_names
             ) and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
 
