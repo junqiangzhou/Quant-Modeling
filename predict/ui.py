@@ -1,4 +1,4 @@
-from config.config import label_feature
+from config.config import label_names
 from data.stocks_fetcher import MAG7, ETF, BOND, PICKS, CHINA
 
 import dash
@@ -7,9 +7,9 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import glob
 
-buy_names = [name + "+" for name in label_feature]
-sell_names = [name + "-" for name in label_feature]
-hold_names = [name + "0" for name in label_feature]
+buy_names = [name + "+" for name in label_names]
+sell_names = [name + "-" for name in label_names]
+hold_names = [name + "0" for name in label_names]
 
 style_cell = {
     "minWidth": "20px",

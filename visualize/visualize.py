@@ -1,5 +1,5 @@
 from data.utils import get_stock_df
-from config.config import label_feature
+from config.config import label_names
 
 import pandas as pd
 import mplfinance as mpf
@@ -13,7 +13,7 @@ def visualize_dataset(df: pd.DataFrame,
                       viz_label="trend_30days",
                       viz_pred=False,
                       plot_macd=True) -> None:
-    assert viz_label in label_feature, "label not found in label_feature"
+    assert viz_label in label_names, "label not found in label_names"
     if stock:
         df = get_stock_df(df, stock)
         if df.shape[0] == 0:

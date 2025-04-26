@@ -5,7 +5,7 @@ from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
 from model.model import PredictionModel, CustomLoss
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, device,
-                           look_back_window, label_feature, buy_sell_signals,
+                           look_back_window, label_names, buy_sell_signals,
                            feature_names)
 from data.stocks_fetcher import MAG7, PICKS
 
@@ -54,9 +54,9 @@ def eval_model(model, criterion, test_dataset):
         loss = criterion(logits, targets)
         print(f"Test Loss: {loss.item():.4f}")
 
-        logits = logits.reshape(targets.shape[0], len(label_feature), 3)
+        logits = logits.reshape(targets.shape[0], len(label_names), 3)
         probs, preds = None, None
-        for i, label_name in enumerate(label_feature):
+        for i, label_name in enumerate(label_names):
             logit = logits[:, i, :]
             target = targets[:, i]
 
@@ -103,7 +103,7 @@ def eval_xgboost_model(model, test_dataset):
     preds, probs = model.predict(inputs)
     # check_nan_in_tensor(probs)
 
-    for i, label_name in enumerate(label_feature):
+    for i, label_name in enumerate(label_names):
         pred = preds[:, i]
         target = targets[:, i]
 
@@ -169,9 +169,9 @@ if __name__ == "__main__":
 
     predict_probs, predict_labels = eval_model(model, criterion, test_dataset)
 
-    pred_label_names = [label + "_pred" for label in label_feature]
+    pred_label_names = [label + "_pred" for label in label_names]
     prob_label_names = [
-        label + str(i) + "_prob" for label in label_feature for i in range(3)
+        label + str(i) + "_prob" for label in label_names for i in range(3)
     ]
     count = 0
     df_all = None

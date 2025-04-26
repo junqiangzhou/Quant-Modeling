@@ -1,6 +1,6 @@
 import pytest
 
-from config.config import feature_names, label_feature, label_columns
+from config.config import feature_names, label_names, label_columns
 
 expected_feature_names = [
     'Open_diff', 'High_diff', 'Low_diff', 'Close_diff', 'Volume_diff',
@@ -29,8 +29,8 @@ expected_label_names = [
 
 
 def test_label_names_match_expected():
-    assert len(label_feature) == 4
-    assert label_feature == expected_label_names, "Label names do not match the expected list"
+    assert len(label_names) == 4
+    assert label_names == expected_label_names, "Label names do not match the expected list"
 
 
 def test_label_columns_match_expected():

@@ -95,7 +95,7 @@ feature_names = [
 ] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals + other_features
 
 # classification labels for model to predict
-label_feature = list(
+label_names = list(
     chain(*[[f"trend_{time}days"] for time in future_time_windows]))
 
 # all columns added for debugging labeling

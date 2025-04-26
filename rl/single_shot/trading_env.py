@@ -3,7 +3,7 @@ from data.utils import get_date_back
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, Action, feature_names,
-                           look_back_window, label_feature, MODEL_EXPORT_NAME)
+                           look_back_window, label_names, MODEL_EXPORT_NAME)
 
 import gymnasium as gym
 import numpy as np
@@ -95,7 +95,7 @@ class StockTradingEnv(gym.Env):
         features_tensor = torch.tensor(features, dtype=torch.float32)
         with torch.no_grad():
             logits = self.prediction_model(features_tensor)
-            logits = logits.reshape(len(label_feature), 3)
+            logits = logits.reshape(len(label_names), 3)
             predicted_prob = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities

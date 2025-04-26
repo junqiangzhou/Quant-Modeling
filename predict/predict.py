@@ -3,7 +3,7 @@ from data.data_fetcher import create_dataset
 from data.utils import get_date_back
 from feature.feature import look_back_window, compute_online_feature
 from model.model import PredictionModel
-from config.config import (ENCODER_TYPE, label_feature, feature_names,
+from config.config import (ENCODER_TYPE, label_names, feature_names,
                            MODEL_EXPORT_NAME)
 
 from datetime import date
@@ -27,9 +27,9 @@ model.load_state_dict(torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
 model.eval()
 
 # Initialize
-buy_names = [name + "+" for name in label_feature]
-sell_names = [name + "-" for name in label_feature]
-hold_names = [name + "0" for name in label_feature]
+buy_names = [name + "+" for name in label_names]
+sell_names = [name + "-" for name in label_names]
+hold_names = [name + "0" for name in label_names]
 columns = buy_names + sell_names + hold_names
 pred = np.zeros((len(stocks), len(columns)))
 
@@ -57,7 +57,7 @@ for i, stock in enumerate(stocks):
 
     with torch.no_grad():
         logits = model(features_tensor)
-        logits = logits.reshape(len(label_feature), 3)
+        logits = logits.reshape(len(label_names), 3)
         probs = torch.softmax(
             logits, dim=1).float().numpy()  # convert logits to probabilities
 

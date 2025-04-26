@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 import bisect
 
 from datetime import datetime
-from config.config import (label_feature, look_back_window, feature_names)
+from config.config import (label_names, look_back_window, feature_names)
 
 verbose = 0
 
@@ -36,7 +36,7 @@ def create_batch_feature(
     label_list = []
     date_list = []
     for i in range(look_back_window, len(df)):
-        if pd.isna(df.iloc[i][label_feature[0]]
+        if pd.isna(df.iloc[i][label_names[0]]
                    ):  # Skip earnings day where we don't compute labels
             continue
 
@@ -45,7 +45,7 @@ def create_batch_feature(
         history = history.values
         batch_list.append(history)
 
-        label = [df.iloc[i][name] for name in label_feature]
+        label = [df.iloc[i][name] for name in label_names]
         label_list.append(label)
         date_list.append(df.index[i])
 
