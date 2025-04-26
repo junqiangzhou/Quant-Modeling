@@ -3,7 +3,7 @@ import numpy as np
 from datetime import timedelta
 
 from data.utils import perc_change, days_diff
-from config.config import (future_time_windows, label_columns,
+from config.config import (future_time_windows, label_debug_columns,
                            buy_sell_signals)
 
 
@@ -50,7 +50,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
-    labels = pd.DataFrame(np.nan, columns=label_columns, index=df.index)
+    labels = pd.DataFrame(np.nan, columns=label_debug_columns, index=df.index)
     while curr_date < df.index[-1]:
         # print(f"Quarter bewteen: {curr_date} and {next_date}")
         # (???) somehow the earnings date is 1day ahead, so I need to start from index 2 here.

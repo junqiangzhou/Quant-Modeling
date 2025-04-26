@@ -100,7 +100,7 @@ label_names = list(
 
 # all columns added for debugging labeling
 # [max_close, max_duration, min_close, min_duration, trend_Xdays]
-label_columns = list(
+label_debug_columns = list(
     chain(*[[
         f"{time}days_max_close", f"{time}days_max_duration",
         f"{time}days_min_close", f"{time}days_min_duration",
