@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from data.utils import perc_change, days_diff
 from config.config import (future_time_windows, label_debug_columns,
-                           buy_sell_signals)
+                           buy_sell_signals, LABEL_TYPE, LabelType)
 
 
 def is_stock_trending_up(curr_close, max_close, max_index, min_close,
@@ -73,8 +73,11 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 
             label = []
             for N in future_time_windows:
-                up_perc_threshold = daily_change_perc * N * 0.2  # >= 20% going up at daily perc
-                down_perc_threshold = -daily_change_perc * N * 0.16  # >= 16% going down at daily perc
+                up_perc_threshold = min(daily_change_perc * N * 0.2,
+                                        0.5)  # >= 20% going up at daily perc
+                down_perc_threshold = -min(
+                    daily_change_perc * N * 0.16,
+                    0.4)  # >= 16% going down at daily perc
 
                 # Calculate slice for next N rows, clamp to end
                 end_pos = min(i + N, len(df_window))
@@ -94,11 +97,15 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                                         min_close, min_index,
                                         up_perc_threshold,
                                         down_perc_threshold):
-                    if any(buy_sell_signals_vals == 1) and bullish_signal == 1:
-                        trend = 1  # 1 - trend up
+                    if LABEL_TYPE == LabelType.PRICE:
+                        trend = 1
+                    elif LABEL_TYPE == LabelType.TREND and any(
+                            buy_sell_signals_vals ==
+                            1) and bullish_signal == 1:
                         # print(
                         #     f"Buy signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
+                        trend = 1  # 1 - trend up
                     # else:
                     # print(f"No indicator for buy signal, {curr_index.date().strftime('%Y-%m-%d')}")
                     # print(f"Date: {curr_index}, Close: {curr_close}, >>>>>Up: Percent {(max_close - curr_close) / curr_close * 100}, Length {max_index - curr_index}")
@@ -106,8 +113,11 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
                                             min_close, min_index,
                                             up_perc_threshold,
                                             down_perc_threshold):
-                    if any(buy_sell_signals_vals ==
-                           -1) and bearish_signal == 1:
+                    if LABEL_TYPE == LabelType.PRICE:
+                        trend = 2
+                    elif LABEL_TYPE == LabelType.TREND and any(
+                            buy_sell_signals_vals ==
+                            -1) and bearish_signal == 1:
                         # print(
                         #     f"Sell signal, {curr_index.date().strftime('%Y-%m-%d')}"
                         # )
