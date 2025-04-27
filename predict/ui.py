@@ -7,9 +7,15 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import glob
 
-buy_names = [name + "+" for name in label_names]
-sell_names = [name + "-" for name in label_names]
-hold_names = [name + "0" for name in label_names]
+buy_names = [name + "+" for name in label_names] + [
+    name.replace("trend", "price") + "+" for name in label_names
+]
+sell_names = [name + "-" for name in label_names] + [
+    name.replace("trend", "price") + "-" for name in label_names
+]
+hold_names = [name + "0" for name in label_names] + [
+    name.replace("trend", "price") + "0" for name in label_names
+]
 
 style_cell = {
     "minWidth": "20px",
@@ -91,7 +97,7 @@ def update_tables(n):
                              ascending=False).head(100).reset_index()
     df_sell.drop(columns=buy_names + hold_names, inplace=True)
 
-    stock_picks = ETF + BOND + MAG7 + PICKS + CHINA + ["HCA", "OMC"]
+    stock_picks = ETF + BOND + MAG7 + PICKS + CHINA
     df_focus = df.loc[stock_picks, ["BUY", "SELL", "HOLD"]].reset_index()
 
     return df_buy.to_dict("records"), df_sell.to_dict(
