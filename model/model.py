@@ -302,11 +302,12 @@ class CustomLoss(nn.Module):
     def __init__(self):
         super(CustomLoss, self).__init__()
         # Add different weights to each class
-        self.class_weights = torch.tensor([0.25, 1.0, 1.0]).to(device)
-        self.ce_loss = nn.CrossEntropyLoss(weight=self.class_weights,
-                                           reduction='none')
+        self.class_weights = torch.tensor([0.5, 1.0, 1.0]).to(device)
         # Add different weights to each label
         self.label_weights = torch.tensor([1.0, 1.0, 1.0, 1.0]).to(device)
+
+        self.ce_loss = nn.CrossEntropyLoss(weight=self.class_weights,
+                                           reduction='none')
 
     def forward(self, logits, targets):
         # logits shape: (batch_size, 3 * num_labels)
