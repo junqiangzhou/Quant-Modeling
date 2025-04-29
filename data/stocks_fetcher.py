@@ -5,7 +5,10 @@ import random
 MAG7 = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NVDA"]
 ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
 BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
-PICKS = ["NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "HCA", "TTWO"]
+PICKS = [
+    "NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "HCA",
+    "TTWO"
+]
 CHINA = [
     "BABA", "TCEHY", "JD", "BIDU", "PDD", "BILI", "DOYU", "HUYA", "NTES",
     "ZIJMY", "TCOM", "LI", "NIO", "XPEV", "BEKE", "DIDIY", "LKNCY", "ZK",

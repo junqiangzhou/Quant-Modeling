@@ -24,7 +24,7 @@ def test_feature_names_match_expected():
 
 
 expected_label_names = [
-    'trend_5days', 'trend_10days', 'trend_20days', 'trend_30days'
+    'trend_10days', 'trend_20days', 'trend_40days', 'trend_60days'
 ]
 
 
