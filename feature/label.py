@@ -52,7 +52,7 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     curr_date = df.index[0]
     labels = pd.DataFrame(np.nan, columns=label_debug_columns, index=df.index)
     while curr_date < df.index[-1]:
-        # print(f"Quarter bewteen: {curr_date} and {next_date}")
+        # print(f"Quarter between: {curr_date} and {next_date}")
         # (???) somehow the earnings date is 1day ahead, so I need to start from index 2 here.
 
         next_date = next(next_earning_date_generator, df.index[-1])
@@ -73,10 +73,10 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
 
             label = []
             for N in future_time_windows:
-                up_perc_threshold = min(daily_change_perc * N * 0.2,
+                up_perc_threshold = min(daily_change_perc * N * 0.2 * 2,
                                         0.5)  # >= 20% going up at daily perc
                 down_perc_threshold = -min(
-                    daily_change_perc * N * 0.16,
+                    daily_change_perc * N * 0.16 * 2,
                     0.4)  # >= 16% going down at daily perc
 
                 # Calculate slice for next N rows, clamp to end
