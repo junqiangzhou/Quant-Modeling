@@ -1,4 +1,6 @@
 import pytest
+import os
+import pandas as pd
 
 from data.data_fetcher import create_dataset
 from feature.label import compute_labels
@@ -13,7 +15,14 @@ def mock_fetch_data():
     end_date = "2023-03-31"
 
     # Simulate create_dataset behavior
-    df = create_dataset(stock, start_date, end_date)
+    csv_file = f"./feature/test/test_{stock}_{start_date}_{end_date}.csv"
+    if not os.path.exists(csv_file):
+        df = create_dataset(stock, start_date, end_date)
+        df.to_csv(csv_file, index=True, index_label="Date")
+    else:
+        df = pd.read_csv(csv_file)
+        df.set_index('Date', inplace=True)
+        df.index = pd.to_datetime(df.index, utc=True)
 
     return df
 
