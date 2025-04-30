@@ -7,61 +7,60 @@
 import os
 import pandas as pd
 import backtrader as bt
-import tushare as ts
+# import tushare as ts
 from datetime import datetime
 import yfinance as yf
 import numpy as np
 
+# def get_ts_data(ts_token, ts_code, start_date, end_date, freq='30min'):
+#     """
+#     从Tushare获取股票数据，如果本地已有则直接加载
 
-def get_ts_data(ts_token, ts_code, start_date, end_date, freq='30min'):
-    """
-    从Tushare获取股票数据，如果本地已有则直接加载
-    
-    参数:
-    ts_token (str): Tushare API Token
-    ts_code (str): 股票代码（如：'000001.SZ'）
-    start_date (str): 开始日期（如：'2020-01-01'）
-    end_date (str): 结束日期（如：'2021-01-01'）
-    freq (str): 数据频率，默认为30分钟
-    
-    返回:
-    pandas.DataFrame: 包含OHLCV数据的DataFrame
-    """
-    # 文件路径
-    file_path = f'./data/{ts_code}-{start_date}-{end_date}-{freq}.csv'
+#     参数:
+#     ts_token (str): Tushare API Token
+#     ts_code (str): 股票代码（如：'000001.SZ'）
+#     start_date (str): 开始日期（如：'2020-01-01'）
+#     end_date (str): 结束日期（如：'2021-01-01'）
+#     freq (str): 数据频率，默认为30分钟
 
-    # 检查本地是否已存在该文件
-    if os.path.exists(file_path):
-        print(f"从本地文件加载数据: {file_path}")
-        df = pd.read_csv(file_path, parse_dates=['trade_time'])  # 读取并解析时间列
-        return df
+#     返回:
+#     pandas.DataFrame: 包含OHLCV数据的DataFrame
+#     """
+#     # 文件路径
+#     file_path = f'./data/{ts_code}-{start_date}-{end_date}-{freq}.csv'
 
-    # 设置Tushare token
-    ts.set_token(ts_token)
-    pro = ts.pro_api()
+#     # 检查本地是否已存在该文件
+#     if os.path.exists(file_path):
+#         print(f"从本地文件加载数据: {file_path}")
+#         df = pd.read_csv(file_path, parse_dates=['trade_time'])  # 读取并解析时间列
+#         return df
 
-    # 获取数据
-    df = ts.pro_bar(
-        ts_code=ts_code,
-        start_date=start_date,
-        end_date=end_date,
-        freq=freq,
-        asset='E',  # 股票类型
-        adj='qfq',  # 前复权
-    )
+#     # 设置Tushare token
+#     ts.set_token(ts_token)
+#     pro = ts.pro_api()
 
-    if df is None or df.empty:
-        print("从 Tushare 获取的数据为空，请检查权限或参数设置。")
-        return None
+#     # 获取数据
+#     df = ts.pro_bar(
+#         ts_code=ts_code,
+#         start_date=start_date,
+#         end_date=end_date,
+#         freq=freq,
+#         asset='E',  # 股票类型
+#         adj='qfq',  # 前复权
+#     )
 
-    # 创建目录（如果不存在）
-    os.makedirs('./data', exist_ok=True)
+#     if df is None or df.empty:
+#         print("从 Tushare 获取的数据为空，请检查权限或参数设置。")
+#         return None
 
-    # 保存数据到本地文件
-    df.to_csv(file_path, index=False)
-    print(f"数据已保存至: {file_path}")
+#     # 创建目录（如果不存在）
+#     os.makedirs('./data', exist_ok=True)
 
-    return df
+#     # 保存数据到本地文件
+#     df.to_csv(file_path, index=False)
+#     print(f"数据已保存至: {file_path}")
+
+#     return df
 
 
 def create_bt_data_feed(df, start_date=None, end_date=None):

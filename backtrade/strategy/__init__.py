@@ -5,6 +5,7 @@ from .buy_and_hold import *
 from .dma_crossover import *
 from .ma_crossover import *
 from .mfi_strategy import *
+from .ml_strategy import *
 from .obv_strategy import *
 from .rsi_strategy import *
 from .rsibb_strategy import *

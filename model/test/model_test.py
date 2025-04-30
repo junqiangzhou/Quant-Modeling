@@ -1,4 +1,5 @@
 from model.model import CustomLoss
+from config.config import device
 
 import torch
 import torch.nn as nn
@@ -7,7 +8,6 @@ import pytest
 batch_size = 2
 num_labels = 4
 num_classes = 3
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def test_custom_loss_shapes():
