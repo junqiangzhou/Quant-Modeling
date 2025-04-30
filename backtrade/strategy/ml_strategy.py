@@ -43,8 +43,6 @@ class MLStrategy(bt.Strategy):
 
         # ========== 2. 跟踪订单和止盈止损单 ==========
         self.order = None  # 主订单
-        self.stop_order = None  # 止损订单
-        self.takeprofit_order = None  # 止盈订单
 
         # Load the saved parameters
         # Set to evaluation mode
@@ -58,23 +56,73 @@ class MLStrategy(bt.Strategy):
         self.debug_mode = False
 
     def notify_order(self, order):
-        pass
+        """订单状态更新回调"""
+        if order.status in [order.Submitted, order.Accepted]:
+            # 订单提交/接受后，不做特殊处理
+            return
+
+        # 订单完成
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log(
+                    f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                )
+            elif order.issell():
+                self.log(
+                    f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                )
+
+            self.order = None
+
+        # 订单取消/保证金不足/拒绝
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log("[警告] 订单取消/保证金不足/拒绝")
+            self.order = None
 
     def notify_trade(self, trade):
-        pass
+        if not trade.isclosed:
+            return
+        self.log(
+            f"TRADE PROFIT, GROSS: {trade.pnl:.2f}, NET: {trade.pnlcomm:.2f}")
 
     def next(self):
-        pass
+        # Skip if we have an active main order (buy/sell)
+        if self.order:
+            self.log(f"Skipping,  we have an active order")
+            return
+
+        if len(self.data) < look_back_window:
+            # self.log(f"Warm-up: skipping, only {len(self.data)} bars available")
+            return
+
+        action = self.compute_action()
+
+        if action == Action.Buy:
+            if not self.position:  # Only buy if not already in position
+                cash = self.broker.get_cash()
+                size = (self.p.target_pct * cash) / self.dataclose[0]
+                self.log(
+                    f"BUY CREATE, Price: {self.dataclose[0]:.2f}, Size: {size:.2f}"
+                )
+                self.order = self.buy(price=self.dataclose[0],
+                                      size=size,
+                                      exectype=bt.Order.Close)
+
+        elif action == Action.Sell:
+            if self.position:  # Only sell if in position
+                self.log(f"SELL CREATE, Price: {self.dataclose[0]:.2f}")
+                self.order = self.sell(size=self.position.size,
+                                       price=self.dataclose[0],
+                                       exectype=bt.Order.Close)
 
     def stop(self):
         """回测结束时输出最终市值"""
         self.log(f"最终市值: {self.broker.getvalue():.2f}")
 
     def compute_features(self):
-        history = np.array([
-            getattr(self.data, feature_names)[-i]
-            for i in reversed(range(look_back_window))
-        ])
+        history = np.array(
+            [[getattr(self.data, name)[-i] for name in feature_names]
+             for i in reversed(range(look_back_window))])
         if np.isnan(history).any() or np.isinf(history).any():
             return None
         features = np.expand_dims(history, axis=0)
@@ -82,18 +130,10 @@ class MLStrategy(bt.Strategy):
         return features_scaled
 
     def compute_action(self) -> Action:
-        # Ensure enough historical data is available
-        if len(self.data) < look_back_window:
-            return Action.Hold
-
-        # Avoid multiple open orders
-        if self.order:
-            return Action.Hold
-
         # Must sell all shares before earnings day
         if getattr(self.data, "Earnings_Date")[0]:
             if self.debug_mode:
-                print(
+                self.log(
                     f"Earnings day must sell, {self.data.datetime.datetime(0)}"
                 )
             return Action.Sell
@@ -102,15 +142,14 @@ class MLStrategy(bt.Strategy):
         if features is None or np.isnan(features).any() or np.isinf(
                 features).any():
             if self.debug_mode:
-                print(
+                self.log(
                     f"NaN or INF detected on {self.data.datetime.datetime(0)}")
                 return Action.Hold
         else:
             features_tensor = torch.tensor(features, dtype=torch.float32)
 
-        buy_sell_signals_vals = [
-            getattr(self.data, col)[0] for col in buy_sell_signals
-        ]
+        buy_sell_signals_vals = np.array(
+            [getattr(self.data, col)[0] for col in buy_sell_signals])
         bullish_signal = getattr(self.data, "Price_Above_MA_5")[0]
         bearish_signal = getattr(self.data, "Price_Below_MA_5")[0]
         with torch.no_grad():
@@ -144,14 +183,14 @@ class MLStrategy(bt.Strategy):
 
         if should_sell(probs):  # need to sell
             if self.debug_mode:
-                print(
-                    f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.Close[0]:.2f}, prob. of trending down {probs[:, 2]}"
+                self.log(
+                    f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
         elif should_buy(probs):  # good to buy
             if self.debug_mode:
-                print(
-                    f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.Close[0]:.2f}, prob. of trending up {probs[:, 1]}"
+                self.log(
+                    f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"
                 )
             return Action.Buy
         else:

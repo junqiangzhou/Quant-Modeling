@@ -24,7 +24,7 @@ class BacktestRunner:
         self.strategy_params = strategy_params
 
         # 初始化cerebro引擎
-        self.cerebro = bt.Cerebro()
+        self.cerebro = bt.Cerebro(cheat_on_close=True)
         self.cerebro.addstrategy(self.strategy_class, **self.strategy_params)
 
         # 添加数据
@@ -149,6 +149,23 @@ def run_backtest(df,
 
     # 定义一个自定义的 PandasData 类
     class PandasDataCustom(bt.feeds.PandasData):
+        lines = ('Open_diff', 'High_diff', 'Low_diff', 'Close_diff',
+                 'Volume_diff', 'MA_5_diff', 'MA_10_diff', 'MA_20_diff',
+                 'MA_50_diff', 'MA_5_20_Crossover_Signal_0',
+                 'MA_5_20_Crossover_Signal_-1', 'MA_5_20_Crossover_Signal_1',
+                 'MA_10_50_Crossover_Signal_0', 'MA_10_50_Crossover_Signal_-1',
+                 'MA_10_50_Crossover_Signal_1', 'MACD_Crossover_Signal_0',
+                 'MACD_Crossover_Signal_-1', 'MACD_Crossover_Signal_1',
+                 'RSI_Over_Bought_Signal_0', 'RSI_Over_Bought_Signal_-1',
+                 'RSI_Over_Bought_Signal_1', 'BB_Signal_0', 'BB_Signal_-1',
+                 'BB_Signal_1', 'Price_Above_MA_5', 'Price_Below_MA_5',
+                 'MA_5_10_Crossover_Signal', 'MA_5_50_Crossover_Signal',
+                 'MA_10_20_Crossover_Signal', 'MA_20_50_Crossover_Signal',
+                 'VWAP_Crossover_Signal', 'daily_change',
+                 'MA_5_20_Crossover_Signal', 'MA_10_50_Crossover_Signal',
+                 'MACD_Crossover_Signal', 'RSI_Over_Bought_Signal',
+                 'BB_Signal', 'Price_Above_MA_5', 'Price_Below_MA_5',
+                 'Earnings_Date')
         params = (
             ('datetime', None),  # 使用索引作为日期
             ('open', 'Open'),
@@ -156,7 +173,47 @@ def run_backtest(df,
             ('low', 'Low'),
             ('close', 'Close'),
             ('volume', 'Volume'),
-            ('openinterest', None))
+            ('openinterest', None),
+            ('Open_diff', -1),
+            ('High_diff', -1),
+            ('Low_diff', -1),
+            ('Close_diff', -1),
+            ('Volume_diff', -1),
+            ('MA_5_diff', -1),
+            ('MA_10_diff', -1),
+            ('MA_20_diff', -1),
+            ('MA_50_diff', -1),
+            ('MA_5_20_Crossover_Signal_0', -1),
+            ('MA_5_20_Crossover_Signal_-1', -1),
+            ('MA_5_20_Crossover_Signal_1', -1),
+            ('MA_10_50_Crossover_Signal_0', -1),
+            ('MA_10_50_Crossover_Signal_-1', -1),
+            ('MA_10_50_Crossover_Signal_1', -1),
+            ('MACD_Crossover_Signal_0', -1),
+            ('MACD_Crossover_Signal_-1', -1),
+            ('MACD_Crossover_Signal_1', -1),
+            ('RSI_Over_Bought_Signal_0', -1),
+            ('RSI_Over_Bought_Signal_-1', -1),
+            ('RSI_Over_Bought_Signal_1', -1),
+            ('BB_Signal_0', -1),
+            ('BB_Signal_-1', -1),
+            ('BB_Signal_1', -1),
+            ('Price_Above_MA_5', -1),
+            ('Price_Below_MA_5', -1),
+            ('MA_5_10_Crossover_Signal', -1),
+            ('MA_5_50_Crossover_Signal', -1),
+            ('MA_10_20_Crossover_Signal', -1),
+            ('MA_20_50_Crossover_Signal', -1),
+            ('VWAP_Crossover_Signal', -1),
+            ('daily_change', -1),
+            ('MA_5_20_Crossover_Signal', -1),
+            ('MA_10_50_Crossover_Signal', -1),
+            ('MACD_Crossover_Signal', -1),
+            ('RSI_Over_Bought_Signal', -1),
+            ('BB_Signal', -1),
+            ('Price_Above_MA_5', -1),
+            ('Price_Below_MA_5', -1),
+            ('Earnings_Date', -1))
 
     data = PandasDataCustom(dataname=df)
     cerebro.adddata(data)
