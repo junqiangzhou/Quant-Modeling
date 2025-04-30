@@ -16,3 +16,5 @@ xgboost~=2.1.4
 dash~=3.0.3
 pytest~=8.3.5
 pytest-mock~=3.14.0
+backtrader~=1.9.78
+seaborn~=0.13.2
