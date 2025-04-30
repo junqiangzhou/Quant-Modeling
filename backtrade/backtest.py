@@ -32,17 +32,13 @@ from data.utils import get_date_back
 plt.style.use("seaborn-darkgrid")
 pd.set_option('display.max_columns', None)
 
-stock = "HIMS"
-start_date = "2025-01-01"
-end_date = "2025-04-29"
+stock = "GOOG"
+start_date = "2020-01-01"
+end_date = "2024-12-31"
 shifted_start_date = get_date_back(start_date, look_back_window + 30)
 df = create_dataset(stock, shifted_start_date, end_date)
 df.index = pd.to_datetime(df.index)
 df = df[start_date:]
-# df = load_data_from_yahoo("TSLA",
-#                           "2020-01-01",
-#                           "2023-12-31",
-#                           save_to_csv=False)
 
 # # 查看数据统计信息
 # print(f"数据时间范围: {df.index.min()} 至 {df.index.max()}")

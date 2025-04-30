@@ -43,6 +43,8 @@ class MLStrategy(bt.Strategy):
 
         # ========== 2. 跟踪订单和止盈止损单 ==========
         self.order = None  # 主订单
+        self.stop_loss_order = None  # 止损单
+        self.take_profit_order = None  # 止盈单
 
         # Load the saved parameters
         # Set to evaluation mode
@@ -67,10 +69,33 @@ class MLStrategy(bt.Strategy):
                 self.log(
                     f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
                 )
+
+                # 设置止盈止损单
+                buy_price = order.executed.price
+                size = order.executed.size
+                sl_price = buy_price * (1 - self.p.stop_loss)
+                tp_price = buy_price * (1 + self.p.take_profit)
+
+                self.stop_loss_order = self.sell(size=size,
+                                                 exectype=bt.Order.Stop,
+                                                 price=sl_price)
+                self.take_profit_order = self.sell(size=size,
+                                                   exectype=bt.Order.Limit,
+                                                   price=tp_price)
+
             elif order.issell():
                 self.log(
                     f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
                 )
+
+                # 取消止盈止损单（如果尚未成交）
+                if self.stop_loss_order and self.stop_loss_order != order:
+                    self.cancel(self.stop_loss_order)
+                if self.take_profit_order and self.take_profit_order != order:
+                    self.cancel(self.take_profit_order)
+
+                self.stop_loss_order = None
+                self.take_profit_order = None
 
             self.order = None
 
@@ -88,11 +113,14 @@ class MLStrategy(bt.Strategy):
     def next(self):
         # Skip if we have an active main order (buy/sell)
         if self.order:
-            self.log(f"Skipping,  we have an active order")
+            if self.debug_mode:
+                self.log(f"Skipping,  we have an active order")
             return
 
         if len(self.data) < look_back_window:
-            # self.log(f"Warm-up: skipping, only {len(self.data)} bars available")
+            if self.debug_mode:
+                self.log(
+                    f"Warm-up: skipping, only {len(self.data)} bars available")
             return
 
         action = self.compute_action()
@@ -106,7 +134,7 @@ class MLStrategy(bt.Strategy):
                 )
                 self.order = self.buy(price=self.dataclose[0],
                                       size=size,
-                                      exectype=bt.Order.Close)
+                                      exectype=bt.Order.Limit)
 
         elif action == Action.Sell:
             if self.position:  # Only sell if in position
@@ -114,6 +142,14 @@ class MLStrategy(bt.Strategy):
                 self.order = self.sell(size=self.position.size,
                                        price=self.dataclose[0],
                                        exectype=bt.Order.Close)
+
+                # 卖出主仓位时取消止盈止损单（如果存在）
+                if self.stop_loss_order:
+                    self.cancel(self.stop_loss_order)
+                if self.take_profit_order:
+                    self.cancel(self.take_profit_order)
+                self.stop_loss_order = None
+                self.take_profit_order = None
 
     def stop(self):
         """回测结束时输出最终市值"""
