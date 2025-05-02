@@ -7,7 +7,7 @@ ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
 BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
 PICKS = [
     "NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "HCA",
-    "TTWO"
+    "TTWO", "RDDT", "DOCU", "PINS", "MRVL", "DASH", "NET", "PANW", "ANET"
 ]
 CHINA = [
     "BABA", "TCEHY", "JD", "BIDU", "PDD", "BILI", "DOYU", "HUYA", "NTES",
