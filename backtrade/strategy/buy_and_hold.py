@@ -38,6 +38,8 @@ class BuyAndHoldStrategy(bt.Strategy):
             self.atr = bt.indicators.ATR(self.datas[0],
                                          period=self.p.atr_period)
 
+        self.debug_mode = False
+
     def notify_order(self, order):
         """订单状态更新回调"""
         if order.status in [order.Submitted, order.Accepted]:
@@ -47,25 +49,30 @@ class BuyAndHoldStrategy(bt.Strategy):
         # 订单完成
         if order.status in [order.Completed]:
             if order.isbuy():
-                self.log(
-                    f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
-                )
+                if self.debug_mode:
+                    self.log(
+                        f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                    )
             elif order.issell():
-                self.log(
-                    f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
-                )
+                if self.debug_mode:
+                    self.log(
+                        f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                    )
 
             self.order = None
 
         # 订单取消/保证金不足/拒绝
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log("[警告] 订单取消/保证金不足/拒绝")
+            if self.debug_mode:
+                self.log("[警告] 订单取消/保证金不足/拒绝")
             self.order = None
 
     def notify_trade(self, trade):
         """交易关闭时输出盈亏"""
         if trade.isclosed:
-            self.log(f"[交易结束] 毛收益: {trade.pnl:.2f}, 净收益: {trade.pnlcomm:.2f}")
+            if self.debug_mode:
+                self.log(
+                    f"[交易结束] 毛收益: {trade.pnl:.2f}, 净收益: {trade.pnlcomm:.2f}")
 
     def next(self):
         """
@@ -106,7 +113,8 @@ class BuyAndHoldStrategy(bt.Strategy):
 
             # 安全检查
             if risk_per_share <= 0:
-                self.log("[警告] 风险距离计算有误，使用目标百分比代替")
+                if self.debug_mode:
+                    self.log("[警告] 风险距离计算有误，使用目标百分比代替")
                 size = int((total_value * self.p.target_percent) / close_price)
             else:
                 size = int(risk_amount / risk_per_share)
@@ -123,15 +131,18 @@ class BuyAndHoldStrategy(bt.Strategy):
         size = max(1, size)
 
         # 执行买入
-        self.log(f"[买入] 执行买入并持有策略: 价格={close_price:.2f}, 数量={size}")
+        if self.debug_mode:
+            self.log(f"[买入] 执行买入并持有策略: 价格={close_price:.2f}, 数量={size}")
         self.order = self.buy(size=size)
 
     def stop(self):
         """回测结束时输出最终市值"""
         portfolio_value = self.broker.getvalue()
-        self.log(f"[回测结束] Buy & Hold 策略最终市值: {portfolio_value:.2f}")
+        if self.debug_mode:
+            self.log(f"[回测结束] Buy & Hold 策略最终市值: {portfolio_value:.2f}")
 
         # 计算总收益率
         starting_value = self.broker.startingcash
         roi = (portfolio_value / starting_value - 1.0) * 100
-        self.log(f"[回测结束] 总收益率: {roi:.2f}%")
+        if self.debug_mode:
+            self.log(f"[回测结束] 总收益率: {roi:.2f}%")

@@ -27,7 +27,7 @@ class MLStrategy(bt.Strategy):
 
     params = (
         ('model', None),  # 机器学习模型
-        ('target_pct', 0.9),
+        ('target_pct', 0.5),
         ('stop_loss', 0.08),  # 2% 止损
         ('take_profit', 0.50),  # 5% 止盈
     )
@@ -66,9 +66,10 @@ class MLStrategy(bt.Strategy):
         # 订单完成
         if order.status in [order.Completed]:
             if order.isbuy():
-                self.log(
-                    f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
-                )
+                if self.debug_mode:
+                    self.log(
+                        f"[成交] 买单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                    )
 
                 # 设置止盈止损单
                 buy_price = order.executed.price
@@ -84,9 +85,10 @@ class MLStrategy(bt.Strategy):
                                                    price=tp_price)
 
             elif order.issell():
-                self.log(
-                    f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
-                )
+                if self.debug_mode:
+                    self.log(
+                        f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
+                    )
 
                 # 取消止盈止损单（如果尚未成交）
                 if self.stop_loss_order and self.stop_loss_order != order:
@@ -101,14 +103,18 @@ class MLStrategy(bt.Strategy):
 
         # 订单取消/保证金不足/拒绝
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log("[警告] 订单取消/保证金不足/拒绝")
+            if self.debug_mode:
+                self.log("[警告] 订单取消/保证金不足/拒绝")
             self.order = None
 
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
-        self.log(
-            f"TRADE PROFIT, GROSS: {trade.pnl:.2f}, NET: {trade.pnlcomm:.2f}")
+
+        if self.debug_mode:
+            self.log(
+                f"TRADE PROFIT, GROSS: {trade.pnl:.2f}, NET: {trade.pnlcomm:.2f}"
+            )
 
     def next(self):
         # Skip if we have an active main order (buy/sell)
@@ -128,17 +134,22 @@ class MLStrategy(bt.Strategy):
         if action == Action.Buy:
             if not self.position:  # Only buy if not already in position
                 cash = self.broker.get_cash()
-                size = (self.p.target_pct * cash) / self.dataclose[0]
-                self.log(
-                    f"BUY CREATE, Price: {self.dataclose[0]:.2f}, Size: {size:.2f}"
-                )
+                cash = max(0, cash)
+                size = int(self.p.target_pct * cash) / self.dataclose[0]
+                size = max(0, size)
+                if self.debug_mode:
+                    self.log(
+                        f"BUY CREATE, Price: {self.dataclose[0]:.2f}, Size: {size:.2f}"
+                    )
                 self.order = self.buy(price=self.dataclose[0],
                                       size=size,
                                       exectype=bt.Order.Limit)
 
         elif action == Action.Sell:
-            if self.position:  # Only sell if in position
-                self.log(f"SELL CREATE, Price: {self.dataclose[0]:.2f}")
+            if self.position.size > 0:  # Only sell if in position
+                if self.debug_mode:
+                    self.log(f"SELL CREATE, Price: {self.dataclose[0]:.2f}")
+
                 self.order = self.sell(size=self.position.size,
                                        price=self.dataclose[0],
                                        exectype=bt.Order.Close)
@@ -153,7 +164,8 @@ class MLStrategy(bt.Strategy):
 
     def stop(self):
         """回测结束时输出最终市值"""
-        self.log(f"最终市值: {self.broker.getvalue():.2f}")
+        if self.debug_mode:
+            self.log(f"最终市值: {self.broker.getvalue():.2f}")
 
     def compute_features(self):
         history = np.array(
@@ -180,7 +192,7 @@ class MLStrategy(bt.Strategy):
             if self.debug_mode:
                 self.log(
                     f"NaN or INF detected on {self.data.datetime.datetime(0)}")
-                return Action.Hold
+            return Action.Hold
         else:
             features_tensor = torch.tensor(features, dtype=torch.float32)
 
