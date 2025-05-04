@@ -43,6 +43,13 @@ def download_data(stock_symbol: str,
                   start_date: str,
                   end_date: str,
                   session=None) -> pd.DataFrame:
+    csv_file = f"./data/dataset/stocks/stock_download_{stock_symbol}_{start_date}_{end_date}.csv"
+    if os.path.exists(csv_file):
+        df = pd.read_csv(csv_file)
+        df.set_index('Date', inplace=True)
+        df.index = pd.to_datetime(df.index, utc=True)
+        return df
+
     if session is None:
         ticker = Ticker(stock_symbol)
     else:
@@ -66,6 +73,9 @@ def download_data(stock_symbol: str,
     df = add_earnings_data(df, ticker, start_date, end_date_inclusive)
     # Add a column for stock symbol
     df["stock"] = stock_symbol
+
+    # save df to csv file.
+    df.to_csv(csv_file, index=True, index_label="Date")
     return df
 
 
