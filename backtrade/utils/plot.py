@@ -221,8 +221,8 @@ def plot_performance_analysis(results):
                             margin=dict(l=0, r=0, t=40, b=0))
 
     # 3. 单笔交易收益率 (左下)
-    buy_signals = results.get('signals', {}).get('buy_signals', [])
-    sell_signals = results.get('signals', {}).get('sell_signals', [])
+    buy_signals = results.get('signals', {}).get('buy', [])
+    sell_signals = results.get('signals', {}).get('sell', [])
 
     if buy_signals and sell_signals:
         # 计算每笔交易的收益率
@@ -316,8 +316,8 @@ def plot_backtest_results(df, results, max_candles=200, title=None):
     """
     # 从结果中提取信号
     signals = results.get('signals', {})
-    buy_signals = signals.get('buy_signals', [])
-    sell_signals = signals.get('sell_signals', [])
+    buy_signals = signals.get('buy', [])
+    sell_signals = signals.get('sell', [])
     position_size = signals.get('position_size', [])
 
     # 复制数据防止修改原数据
@@ -401,7 +401,7 @@ def plot_backtest_results(df, results, max_candles=200, title=None):
                                  mode='markers',
                                  name='买入',
                                  marker=dict(symbol='triangle-up',
-                                             size=12,
+                                             size=20,
                                              color='red',
                                              line=dict(width=2, color='red'))),
                       row=1,
@@ -417,7 +417,7 @@ def plot_backtest_results(df, results, max_candles=200, title=None):
                                  mode='markers',
                                  name='卖出',
                                  marker=dict(symbol='triangle-down',
-                                             size=12,
+                                             size=20,
                                              color='green',
                                              line=dict(width=2,
                                                        color='green'))),
