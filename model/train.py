@@ -273,12 +273,14 @@ if __name__ == "__main__":
 
     stocks = df_all['stock'].unique()
     all_features, all_labels, all_dates = None, None, None
+    daily_change_perc_df = pd.DataFrame(columns=["daily_change_perc"])
     for i, stock in enumerate(stocks):
         print(">>>>>>stock: ", stock)
         try:
             df = get_stock_df(df_all, stock)
             # create labels and add them into the dataframe
-            df = compute_labels(df)
+            df, daily_change_perc = compute_labels(df)
+            daily_change_perc_df.loc[stock] = daily_change_perc
             features, labels, dates = create_batch_feature(df)
             if np.isnan(features).any() or np.isnan(labels).any():
                 print(f"NaN detected in {stock}")
@@ -288,6 +290,7 @@ if __name__ == "__main__":
                 continue
         except:
             print(f"Error in processing {stock}")
+            daily_change_perc_df.loc[stock] = 0.0
             continue
         if all_features is None:
             all_features, all_labels, all_dates = features, labels, dates
@@ -296,6 +299,12 @@ if __name__ == "__main__":
             all_labels = np.concatenate((all_labels, labels), axis=0)
             all_dates = np.concatenate((all_dates, dates))
     print("total # of data samples: ", all_features.shape[0])
+    # save the daily change percentage to a CSV file
+    daily_change_perc_df = daily_change_perc_df.round(2)
+    daily_change_perc_df.to_csv(
+        f"./data/dataset/stock_training_{start_date}_{end_date}_perc_threshold.csv",
+        index=True,
+        index_label="Stock")
 
     train_loader, test_dataset, idx_test = split_train_test_data(
         all_features, all_labels, batch_size=128)

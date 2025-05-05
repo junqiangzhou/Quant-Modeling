@@ -46,7 +46,7 @@ def is_stock_trending_down(curr_close, max_close, max_index, min_close,
 # 4. Negative label: If max_price < curr_price or (min_price < curr_price * 0.92 and min_price comes before max_price)
 def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     daily_change_perc = np.percentile(np.abs(df["daily_change"]), 99)
-    print(f"daily change percentile: {daily_change_perc: .2f}")
+    # print(f"daily change percentile: {daily_change_perc: .2f}")
     next_earning_date_generator = (index for index, row in df.iterrows()
                                    if row["Earnings_Date"])
     curr_date = df.index[0]
@@ -138,4 +138,4 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     df = df.join(labels, how='right')
     df = df.iloc[1:]  # drop 1st row
 
-    return df
+    return df, daily_change_perc

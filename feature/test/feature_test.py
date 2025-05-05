@@ -26,7 +26,7 @@ def mock_fetch_data():
         df.set_index('Date', inplace=True)
         df.index = pd.to_datetime(df.index, utc=True).date
 
-    df = compute_labels(df)
+    df, _ = compute_labels(df)
     return df
 
 

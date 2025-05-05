@@ -30,7 +30,7 @@ def mock_fetch_data():
 def test_compute_labels(mock_fetch_data):
     # Test the main integration of the label computation
     df = mock_fetch_data
-    df = compute_labels(df)
+    df, _ = compute_labels(df)
 
     # Check if the labels are computed correctly
     assert not df.empty

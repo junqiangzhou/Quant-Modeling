@@ -2,7 +2,7 @@ import pandas as pd
 from yahoo_fin import stock_info as si
 import random
 
-MAG7 = ["TSLA", "AAPL", "GOOGL", "AMZN", "MSFT", "META", "NVDA"]
+MAG7 = ["TSLA", "AAPL", "GOOG", "AMZN", "MSFT", "META", "NVDA"]
 ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
 BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
 PICKS = [

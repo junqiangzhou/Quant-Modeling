@@ -64,7 +64,16 @@ def eval_model(model, criterion, test_dataset):
                 logit,
                 dim=1).float().cpu().numpy()  # convert logits to probabilities
 
-            pred = np.argmax(prob, axis=1)  # raw predictions
+            pred = np.argmax(
+                prob,
+                axis=1)  # predicted label based from max prob for each row
+            # pred = np.zeros(prob.shape[0])
+            # for i in range(prob.shape[0]):
+            #     if prob[i, 1] > 0.5:
+            #         pred[i] = 1
+            #     elif prob[i, 2] > 0.5:
+            #         pred[i] = 2
+
             feature_mask = False
             if feature_mask:
                 # Update predictions based on buy/sell signals
@@ -129,7 +138,7 @@ if __name__ == "__main__":
         try:
             df = create_dataset(stock, shifted_start_date, end_date)
             # create labels and add them into the dataframe
-            df = compute_labels(df)
+            df, _ = compute_labels(df)
             if df is None:
                 continue
 

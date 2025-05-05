@@ -31,8 +31,8 @@ class MLStrategy(bt.Strategy):
         ('target_pct', 0.9),
         ('stop_loss', 0.08),  # 2% 止损
         ('take_profit', 0.50),  # 5% 止盈
-        ('prob_up', 0.6),  # 60% 的概率才会买入
-        ('prob_down', 0.6),  # 60% 的概率才会卖出
+        ('predict_type',
+         4),  # determins how to choose buy/sell action based on prediction
     )
 
     def log(self, txt, dt=None):
@@ -257,10 +257,16 @@ class MLStrategy(bt.Strategy):
                 dim=1).float().numpy()  # convert logits to probabilities
 
         def should_buy(probs: NDArray) -> bool:
-            # pred = np.argmax(probs, axis=1)
-            # trend_up_labels = np.sum(pred == 1)
-            # ml_pred_up = trend_up_labels == len(label_names)
-            ml_pred_up = np.min(probs[:, 1]) > self.p.prob_up
+            pred = np.argmax(probs, axis=1)
+            if self.p.predict_type == 4:
+                ml_pred_up = np.sum(pred == 1) == len(
+                    label_names)  # all predictions trend up
+            else:
+                if self.p.predict_type not in [0, 1, 2, 3]:
+                    raise ValueError(
+                        f"Invalid predict_type: {self.p.predict_type}")
+                index = self.p.predict_type
+                ml_pred_up = pred[index] == 1  # 5-day prediction trends up
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if ml_pred_up and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
@@ -268,10 +274,16 @@ class MLStrategy(bt.Strategy):
             return False
 
         def should_sell(probs: NDArray) -> bool:
-            # pred = np.argmax(probs, axis=1)
-            # trend_down_labels = np.sum(pred == 2)
-            # ml_pred_down = trend_down_labels == len(label_names)
-            ml_pred_down = np.min(probs[:, 2]) > self.p.prob_down
+            pred = np.argmax(probs, axis=1)
+            if self.p.predict_type == 4:
+                ml_pred_down = np.sum(pred == 2) == len(
+                    label_names)  # all predictions trend down
+            else:
+                if self.p.predict_type not in [0, 1, 2, 3]:
+                    raise ValueError(
+                        f"Invalid predict_type: {self.p.predict_type}")
+                index = self.p.predict_type
+                ml_pred_down = pred[index] == 2  # 5-day prediction trends down
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if ml_pred_down and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
