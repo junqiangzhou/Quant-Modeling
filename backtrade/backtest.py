@@ -65,7 +65,7 @@ metrics_df = pd.DataFrame(columns=all_trade_metrics)
 # RSIBBStrategy,
 # VWAPStrategy,
 
-stocks = MAG7 + ETF + PICKS + BOND
+stocks = MAG7
 for stock in stocks:
     print(f"\n>>>>>>>>>>stock: {stock}")
     try:

@@ -1,6 +1,7 @@
 *.csv
 # !predict/data/*.csv
 !backtrade/backtest_results/*.csv
+!data/dataset/stocks/*.csv
 
 .DS_Store
 # *.pth
