@@ -118,8 +118,8 @@ if __name__ == "__main__":
     end_date = "2024-12-31"
 
     # shift the start date back to get more data for history features
-    shifted_start_date = get_date_back(start_date, look_back_window + 20)
-    testing_stocks = PICKS
+    shifted_start_date = get_date_back(start_date, look_back_window + 30)
+    testing_stocks = PICKS + MAG7
 
     all_features, all_labels, all_dates = None, None, None
     df_all_list = []

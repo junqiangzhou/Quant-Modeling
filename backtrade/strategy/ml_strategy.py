@@ -128,9 +128,6 @@ class MLStrategy(bt.Strategy):
                 if self.take_profit_order and self.take_profit_order != order:
                     self.cancel(self.take_profit_order)
 
-                # self.stop_loss_order = None
-                # self.take_profit_order = None
-
                 self.sell_signals.append(
                     (self.datas[0].datetime.datetime(0), order.executed.price))
                 self.position_sizes.append(
@@ -178,14 +175,11 @@ class MLStrategy(bt.Strategy):
             #         f"Warm-up: skipping, only {len(self.data)} bars available")
             return
 
-        # self.log(f"position size: {self.position.size}")
         if self.position.size == 0:
             if self.stop_loss_order:
                 self.cancel(self.stop_loss_order)
-                # self.stop_loss_order = None
             if self.take_profit_order:
                 self.cancel(self.take_profit_order)
-                # self.take_profit_order = None
 
         action = self.compute_action()
         if action == Action.Buy:
@@ -216,8 +210,6 @@ class MLStrategy(bt.Strategy):
                     self.cancel(self.stop_loss_order)
                 if self.take_profit_order:
                     self.cancel(self.take_profit_order)
-                # self.stop_loss_order = None
-                # self.take_profit_order = None
 
     def stop(self):
         """回测结束时输出最终市值"""
@@ -287,16 +279,16 @@ class MLStrategy(bt.Strategy):
             return False
 
         if should_sell(probs):  # need to sell
-            # if self.debug_mode:
-            #     self.log(
-            #         f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
-            #     )
+            if self.debug_mode:
+                self.log(
+                    f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
+                )
             return Action.Sell
         elif should_buy(probs):  # good to buy
-            # if self.debug_mode:
-            #     self.log(
-            #         f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"
-            #     )
+            if self.debug_mode:
+                self.log(
+                    f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"
+                )
             return Action.Buy
         else:
             return Action.Hold

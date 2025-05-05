@@ -35,7 +35,7 @@ from data.utils import get_date_back
 plt.style.use("seaborn-darkgrid")
 pd.set_option('display.max_columns', None)
 
-start_date = "2020-01-01"
+start_date = "2023-01-01"
 end_date = "2024-12-31"
 shifted_start_date = get_date_back(start_date, look_back_window + 30)
 
@@ -65,7 +65,7 @@ metrics_df = pd.DataFrame(columns=all_trade_metrics)
 # RSIBBStrategy,
 # VWAPStrategy,
 
-stocks = MAG7
+stocks = MAG7 + PICKS
 for stock in stocks:
     print(f"\n>>>>>>>>>>stock: {stock}")
     try:
