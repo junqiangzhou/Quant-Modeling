@@ -27,15 +27,37 @@ class MLStrategy(bt.Strategy):
 
     params = (
         ('model', None),  # 机器学习模型
-        ('target_pct', 0.5),
+        ('debug_mode', False),  # Enable debug mode and logging
+        ('target_pct', 0.9),
         ('stop_loss', 0.08),  # 2% 止损
         ('take_profit', 0.50),  # 5% 止盈
+        ('prob_up', 0.6),  # 60% 的概率才会买入
+        ('prob_down', 0.6),  # 60% 的概率才会卖出
     )
 
     def log(self, txt, dt=None):
         """自定义日志函数，可在 debug 或回测时使用"""
         dt = dt or self.datas[0].datetime.datetime(0)
         print(f"{dt.strftime('%Y-%m-%d %H:%M:%S')} {txt}")
+
+    def get_signals(self):
+        """获取所有交易信号"""
+        return {
+            'buy': self.buy_signals,
+            'sell': self.sell_signals,
+            'position_size': self.position_sizes
+        }
+
+    def log_order_type(self, order):
+        if order.exectype == bt.Order.Market:
+            self.log(f"Market order executed at {order.executed.price}")
+        elif order.exectype == bt.Order.Limit:
+            self.log(f"Limit order executed at {order.executed.price}")
+        elif order.exectype == bt.Order.Stop:
+            self.log(f"Stop order executed at {order.executed.price}")
+        elif order.exectype == bt.Order.StopLimit:
+            self.log(f"Stop-Limit order executed at {order.executed.price}")
+        return
 
     def __init__(self):
         # ========== 1. 保存引用 ==========
@@ -45,6 +67,9 @@ class MLStrategy(bt.Strategy):
         self.order = None  # 主订单
         self.stop_loss_order = None  # 止损单
         self.take_profit_order = None  # 止盈单
+        self.buy_signals = []  # 买入信号列表，格式为 (datetime, price)
+        self.sell_signals = []  # 卖出信号列表，格式为 (datetime, price)
+        self.position_sizes = []  # 持仓变化列表，格式为 (datetime, size)
 
         # Load the saved parameters
         # Set to evaluation mode
@@ -55,7 +80,7 @@ class MLStrategy(bt.Strategy):
             torch.load(f"./model/export/{MODEL_EXPORT_NAME}.pth"))
         self.model.eval()
 
-        self.debug_mode = False
+        self.debug_mode = self.p.debug_mode
 
     def notify_order(self, order):
         """订单状态更新回调"""
@@ -65,6 +90,8 @@ class MLStrategy(bt.Strategy):
 
         # 订单完成
         if order.status in [order.Completed]:
+            if self.debug_mode:
+                self.log_order_type(order)
             if order.isbuy():
                 if self.debug_mode:
                     self.log(
@@ -83,6 +110,11 @@ class MLStrategy(bt.Strategy):
                 self.take_profit_order = self.sell(size=size,
                                                    exectype=bt.Order.Limit,
                                                    price=tp_price)
+                # Collect buy signal
+                self.buy_signals.append(
+                    (self.datas[0].datetime.datetime(0), order.executed.price))
+                self.position_sizes.append(
+                    (self.datas[0].datetime.datetime(0), self.position.size))
 
             elif order.issell():
                 if self.debug_mode:
@@ -96,16 +128,30 @@ class MLStrategy(bt.Strategy):
                 if self.take_profit_order and self.take_profit_order != order:
                     self.cancel(self.take_profit_order)
 
-                self.stop_loss_order = None
-                self.take_profit_order = None
+                self.sell_signals.append(
+                    (self.datas[0].datetime.datetime(0), order.executed.price))
+                self.position_sizes.append(
+                    (self.datas[0].datetime.datetime(0), self.position.size))
 
             self.order = None
 
         # 订单取消/保证金不足/拒绝
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             if self.debug_mode:
-                self.log("[警告] 订单取消/保证金不足/拒绝")
+                if order == self.order:
+                    self.log(
+                        f"[警告] cancel order: {order.status}, {order.info}")
+                if order == self.stop_loss_order:
+                    self.log(
+                        f"[警告] cancel stop loss order: {order.status}, {order.info}"
+                    )
+                if order == self.take_profit_order:
+                    self.log(
+                        f"[警告] cancel take profit order: {order.status}, {order.info}"
+                    )
             self.order = None
+            self.stop_loss_order = None
+            self.take_profit_order = None
 
     def notify_trade(self, trade):
         if not trade.isclosed:
@@ -124,18 +170,23 @@ class MLStrategy(bt.Strategy):
             return
 
         if len(self.data) < look_back_window:
-            if self.debug_mode:
-                self.log(
-                    f"Warm-up: skipping, only {len(self.data)} bars available")
+            # if self.debug_mode:
+            #     self.log(
+            #         f"Warm-up: skipping, only {len(self.data)} bars available")
             return
 
-        action = self.compute_action()
+        if self.position.size == 0:
+            if self.stop_loss_order:
+                self.cancel(self.stop_loss_order)
+            if self.take_profit_order:
+                self.cancel(self.take_profit_order)
 
+        action = self.compute_action()
         if action == Action.Buy:
             if not self.position:  # Only buy if not already in position
                 cash = self.broker.get_cash()
                 cash = max(0, cash)
-                size = int(self.p.target_pct * cash) / self.dataclose[0]
+                size = int(self.p.target_pct * cash / self.dataclose[0])
                 size = max(0, size)
                 if self.debug_mode:
                     self.log(
@@ -143,7 +194,7 @@ class MLStrategy(bt.Strategy):
                     )
                 self.order = self.buy(price=self.dataclose[0],
                                       size=size,
-                                      exectype=bt.Order.Limit)
+                                      exectype=bt.Order.Market)
 
         elif action == Action.Sell:
             if self.position.size > 0:  # Only sell if in position
@@ -159,8 +210,6 @@ class MLStrategy(bt.Strategy):
                     self.cancel(self.stop_loss_order)
                 if self.take_profit_order:
                     self.cancel(self.take_profit_order)
-                self.stop_loss_order = None
-                self.take_profit_order = None
 
     def stop(self):
         """回测结束时输出最终市值"""
@@ -208,23 +257,23 @@ class MLStrategy(bt.Strategy):
                 dim=1).float().numpy()  # convert logits to probabilities
 
         def should_buy(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
-            trend_up_labels = np.sum(pred == 1)
+            # pred = np.argmax(probs, axis=1)
+            # trend_up_labels = np.sum(pred == 1)
+            # ml_pred_up = trend_up_labels == len(label_names)
+            ml_pred_up = np.min(probs[:, 1]) > self.p.prob_up
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
-            if trend_up_labels == len(
-                    label_names
-            ) and trend_up_indicators >= 1 and bullish_signal == 1:
+            if ml_pred_up and trend_up_indicators >= 1 and bullish_signal == 1:
                 return True
 
             return False
 
         def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
-            trend_down_labels = np.sum(pred == 2)
+            # pred = np.argmax(probs, axis=1)
+            # trend_down_labels = np.sum(pred == 2)
+            # ml_pred_down = trend_down_labels == len(label_names)
+            ml_pred_down = np.min(probs[:, 2]) > self.p.prob_down
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
-            if trend_down_labels == len(
-                    label_names
-            ) and trend_down_indicators >= 1 and bearish_signal == 1:
+            if ml_pred_down and trend_down_indicators >= 1 and bearish_signal == 1:
                 return True
 
             return False

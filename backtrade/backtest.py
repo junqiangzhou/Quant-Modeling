@@ -35,7 +35,7 @@ from data.utils import get_date_back
 plt.style.use("seaborn-darkgrid")
 pd.set_option('display.max_columns', None)
 
-start_date = "2020-01-01"
+start_date = "2023-01-01"
 end_date = "2024-12-31"
 shifted_start_date = get_date_back(start_date, look_back_window + 30)
 
@@ -65,7 +65,7 @@ metrics_df = pd.DataFrame(columns=all_trade_metrics)
 # RSIBBStrategy,
 # VWAPStrategy,
 
-stocks = MAG7 + ETF + PICKS + BOND
+stocks = MAG7 + PICKS
 for stock in stocks:
     print(f"\n>>>>>>>>>>stock: {stock}")
     try:
@@ -87,10 +87,26 @@ for stock in stocks:
     metrics = []
     for strategy_class in [BuyAndHoldStrategy, MLStrategy]:
         print(f"\n回测 {strategy_class.__name__}")
-        results, strategy = run_backtest(df=df,
-                                         strategy_class=strategy_class,
-                                         initial_cash=100000,
-                                         commission=0.001)
+
+        if strategy_class == MLStrategy:
+            strategy_params = {
+                'target_pct': 0.9,
+                'stop_loss': 0.2,
+                'take_profit': 0.50,
+                'debug_mode': False,
+                'prob_up': 0.6,
+                'prob_down': 0.6
+            }
+            results, strategy = run_backtest(df=df,
+                                             strategy_class=strategy_class,
+                                             strategy_params=strategy_params,
+                                             initial_cash=100000,
+                                             commission=0.001)
+        else:
+            results, strategy = run_backtest(df=df,
+                                             strategy_class=strategy_class,
+                                             initial_cash=100000,
+                                             commission=0.001)
 
         # viz = False
         # if viz:
