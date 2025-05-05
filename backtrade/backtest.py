@@ -96,8 +96,6 @@ for stock in stocks:
                 'stop_loss': daily_change_perc * 2.0,
                 'take_profit': daily_change_perc * 12.0,
                 'debug_mode': False,
-                'prob_up': 0.5,
-                'prob_down': 0.5
             }
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,
