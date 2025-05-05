@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
 import numpy as np
+import os
 
 warnings.filterwarnings('ignore')
 
@@ -88,14 +89,15 @@ for stock in stocks:
     for strategy_class in [BuyAndHoldStrategy, MLStrategy]:
         print(f"\n回测 {strategy_class.__name__}")
 
+        daily_change_perc = np.percentile(np.abs(df["daily_change"]), 99)
         if strategy_class == MLStrategy:
             strategy_params = {
                 'target_pct': 0.9,
-                'stop_loss': 0.2,
-                'take_profit': 0.50,
+                'stop_loss': daily_change_perc * 2.0,
+                'take_profit': daily_change_perc * 12.0,
                 'debug_mode': False,
-                'prob_up': 0.6,
-                'prob_down': 0.6
+                'prob_up': 0.5,
+                'prob_down': 0.5
             }
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,

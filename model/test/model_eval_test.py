@@ -35,7 +35,7 @@ def test_model_integration(mock_fetch_stocks):
         try:
             df = create_dataset(stock, shifted_start_date, end_date)
             # create labels and add them into the dataframe
-            df = compute_labels(df)
+            df, _ = compute_labels(df)
             if df is None:
                 continue
 

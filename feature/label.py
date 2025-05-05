@@ -138,4 +138,4 @@ def compute_labels(df: pd.DataFrame) -> pd.DataFrame:
     df = df.join(labels, how='right')
     df = df.iloc[1:]  # drop 1st row
 
-    return df
+    return df, daily_change_perc
