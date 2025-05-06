@@ -170,9 +170,9 @@ class MLStrategy(bt.Strategy):
             return
 
         if len(self.data) < look_back_window:
-            # if self.debug_mode:
-            #     self.log(
-            #         f"Warm-up: skipping, only {len(self.data)} bars available")
+            if self.debug_mode:
+                self.log(
+                    f"Warm-up: skipping, only {len(self.data)} bars available")
             return
 
         if self.position.size == 0:
