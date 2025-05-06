@@ -170,9 +170,9 @@ class MLStrategy(bt.Strategy):
             return
 
         if len(self.data) < look_back_window:
-            if self.debug_mode:
-                self.log(
-                    f"Warm-up: skipping, only {len(self.data)} bars available")
+            # if self.debug_mode:
+            #     self.log(
+            #         f"Warm-up: skipping, only {len(self.data)} bars available")
             return
 
         if self.position.size == 0:
@@ -247,28 +247,26 @@ class MLStrategy(bt.Strategy):
 
         buy_sell_signals_vals = np.array(
             [getattr(self.data, col)[0] for col in buy_sell_signals])
-        bullish_signal = getattr(self.data, "Price_Above_MA_5")[0]
-        bearish_signal = getattr(self.data, "Price_Below_MA_5")[0]
         with torch.no_grad():
             logits = self.model(features_tensor)
             logits = logits.reshape(len(label_names), 3)
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-
+            
         def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
             if self.p.predict_type == 4:
-                ml_pred_up = np.sum(pred == 1) == len(
-                    label_names)  # all predictions trend up
+                ml_pred_up = np.all(pred == 1) # all predictions trend up
             else:
                 if self.p.predict_type not in [0, 1, 2, 3]:
                     raise ValueError(
                         f"Invalid predict_type: {self.p.predict_type}")
                 index = self.p.predict_type
                 ml_pred_up = pred[index] == 1  # 5-day prediction trends up
-            trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
-            if ml_pred_up and trend_up_indicators >= 1 and bullish_signal == 1:
+            trend_up_indicators = np.sum(buy_sell_signals_vals) > 0
+            price_above_ma = getattr(self.data, "Price_Above_MA_5")[0] == 1
+            if ml_pred_up and trend_up_indicators and price_above_ma:
                 return True
 
             return False
@@ -276,16 +274,16 @@ class MLStrategy(bt.Strategy):
         def should_sell(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
             if self.p.predict_type == 4:
-                ml_pred_down = np.sum(pred == 2) == len(
-                    label_names)  # all predictions trend down
+                ml_pred_down = np.all(pred == 2) # all predictions trend down
             else:
                 if self.p.predict_type not in [0, 1, 2, 3]:
                     raise ValueError(
                         f"Invalid predict_type: {self.p.predict_type}")
                 index = self.p.predict_type
                 ml_pred_down = pred[index] == 2  # 5-day prediction trends down
-            trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
-            if ml_pred_down and trend_down_indicators >= 1 and bearish_signal == 1:
+            trend_down_indicators = np.sum(buy_sell_signals_vals) < 0
+            price_below_ma = getattr(self.data, "Price_Below_MA_5")[0] == 1
+            if ml_pred_down and trend_down_indicators and price_below_ma:
                 return True
 
             return False

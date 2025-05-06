@@ -43,14 +43,16 @@ def create_batch_feature(
         history = df.iloc[i - look_back_window + 1:i + 1]
         history = history[feature_names]
         history = history.values
-        batch_list.append(history)
+
+        feature = np.expand_dims(history, axis=0)
+        feature_scaled = normalize_features(feature)
+        batch_list.append(np.squeeze(feature_scaled, axis=0))
 
         label = [df.iloc[i][name] for name in label_names]
         label_list.append(label)
         date_list.append(df.index[i])
 
-    features = np.stack(batch_list, axis=0)
-    features_scaled = normalize_features(features)
+    features_scaled = np.stack(batch_list, axis=0)
     labels = np.stack(label_list, axis=0)
     dates = np.array(date_list)
 
