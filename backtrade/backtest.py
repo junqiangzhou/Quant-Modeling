@@ -93,8 +93,7 @@ for stock in stocks:
         if strategy_class == MLStrategy:
             strategy_params = {
                 'target_pct': 0.9,
-                'stop_loss': daily_change_perc * 2.0,
-                'take_profit': daily_change_perc * 12.0,
+                'daily_change_perc': daily_change_perc,
                 'debug_mode': False,
             }
             results, strategy = run_backtest(df=df,

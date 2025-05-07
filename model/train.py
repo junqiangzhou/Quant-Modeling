@@ -89,7 +89,7 @@ def multi_label_random_downsample(X, y, random_state=random_seed):
     sampling_strategy = {}
     for k, v in combination_counts.items():
         if k == zero_label:
-            sampling_strategy[hash(k)] = min(freq_sum, freq_zero)
+            sampling_strategy[hash(k)] = min(freq_sum * 3, freq_zero)
         else:
             sampling_strategy[hash(k)] = v
 
@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
     if MODEL_TYPE == ModelType.TORCH:
         model, criterion = train_model(train_loader,
-                                       epochs=100,
+                                       epochs=30,
                                        learning_rate=1e-4)
         total_params = sum(p.numel() for p in model.parameters())
         print("total # of model params: ", total_params)

@@ -29,10 +29,9 @@ class MLStrategy(bt.Strategy):
         ('model', None),  # 机器学习模型
         ('debug_mode', False),  # Enable debug mode and logging
         ('target_pct', 0.9),
-        ('stop_loss', 0.08),  # 2% 止损
-        ('take_profit', 0.50),  # 5% 止盈
+        ('daily_change_perc', 0.05),
         ('predict_type',
-         4),  # determins how to choose buy/sell action based on prediction
+            4),  # determines how to choose buy/sell action based on prediction
     )
 
     def log(self, txt, dt=None):
@@ -63,6 +62,8 @@ class MLStrategy(bt.Strategy):
         # ========== 1. 保存引用 ==========
         self.dataclose = self.datas[0].close
 
+        self.stop_loss = self.p.daily_change_perc * 2.0
+        self.take_profit = self.p.daily_change_perc * 12.0
         # ========== 2. 跟踪订单和止盈止损单 ==========
         self.order = None  # 主订单
         self.stop_loss_order = None  # 止损单
@@ -103,8 +104,8 @@ class MLStrategy(bt.Strategy):
                 # 设置止盈止损单
                 buy_price = order.executed.price
                 size = order.executed.size
-                sl_price = buy_price * (1 - self.p.stop_loss)
-                tp_price = buy_price * (1 + self.p.take_profit)
+                sl_price = buy_price * (1 - self.stop_loss)
+                tp_price = buy_price * (1 + self.take_profit)
 
                 self.entry_price = buy_price
                 self.stop_loss_order = self.sell(size=size,

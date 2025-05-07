@@ -36,7 +36,7 @@ LABEL_TYPE = LabelType.TREND
 
 # The name of the model to be exported and loaded
 # The model is saved in the model directory
-MODEL_EXPORT_NAME = f"{LABEL_TYPE.name.lower()}_model_cpu_v3" if device.type == 'cpu' else f"{LABEL_TYPE.name.lower()}_model_gpu_v3"
+MODEL_EXPORT_NAME = f"{LABEL_TYPE.name.lower()}_model_cpu_v4" if device.type == 'cpu' else f"{LABEL_TYPE.name.lower()}_model_gpu_v4"
 
 
 class Action(Enum):
