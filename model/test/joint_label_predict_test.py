@@ -19,6 +19,7 @@ def mock_fetch_data():
     df = create_dataset(stock, start_date, end_date)
     return df
 
+
 @pytest.mark.skip
 def test_compute_labels(mock_fetch_data):
     # Test the main integration of the label computation
