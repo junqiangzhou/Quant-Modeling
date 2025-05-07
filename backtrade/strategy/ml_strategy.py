@@ -71,6 +71,8 @@ class MLStrategy(bt.Strategy):
         self.sell_signals = []  # 卖出信号列表，格式为 (datetime, price)
         self.position_sizes = []  # 持仓变化列表，格式为 (datetime, size)
 
+        self.entry_price = None
+
         # Load the saved parameters
         # Set to evaluation mode
         self.model = PredictionModel(feature_len=len(feature_names),
@@ -104,6 +106,7 @@ class MLStrategy(bt.Strategy):
                 sl_price = buy_price * (1 - self.p.stop_loss)
                 tp_price = buy_price * (1 + self.p.take_profit)
 
+                self.entry_price = buy_price
                 self.stop_loss_order = self.sell(size=size,
                                                  exectype=bt.Order.Stop,
                                                  price=sl_price)
@@ -122,6 +125,7 @@ class MLStrategy(bt.Strategy):
                         f"[成交] 卖单执行: 价格={order.executed.price:.2f}, 数量={order.executed.size}"
                     )
 
+                self.entry_price = None
                 # 取消止盈止损单（如果尚未成交）
                 if self.stop_loss_order and self.stop_loss_order != order:
                     self.cancel(self.stop_loss_order)
@@ -253,11 +257,11 @@ class MLStrategy(bt.Strategy):
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-            
+
         def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
             if self.p.predict_type == 4:
-                ml_pred_up = np.all(pred == 1) # all predictions trend up
+                ml_pred_up = np.all(pred == 1)  # all predictions trend up
             else:
                 if self.p.predict_type not in [0, 1, 2, 3]:
                     raise ValueError(
@@ -274,7 +278,7 @@ class MLStrategy(bt.Strategy):
         def should_sell(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
             if self.p.predict_type == 4:
-                ml_pred_down = np.all(pred == 2) # all predictions trend down
+                ml_pred_down = np.all(pred == 2)  # all predictions trend down
             else:
                 if self.p.predict_type not in [0, 1, 2, 3]:
                     raise ValueError(
