@@ -29,8 +29,8 @@ class MLStrategy(bt.Strategy):
         ('model', None),  # 机器学习模型
         ('debug_mode', False),  # Enable debug mode and logging
         ('target_pct', 0.9),
-        ('daily_change_perc', 0.05)(
-            'predict_type',
+        ('daily_change_perc', 0.05),
+        ('predict_type',
             4),  # determines how to choose buy/sell action based on prediction
     )
 
@@ -63,7 +63,7 @@ class MLStrategy(bt.Strategy):
         self.dataclose = self.datas[0].close
 
         self.stop_loss = self.p.daily_change_perc * 2.0
-        self.take_profi = self.p.daily_change_perc * 12.0
+        self.take_profit = self.p.daily_change_perc * 12.0
         # ========== 2. 跟踪订单和止盈止损单 ==========
         self.order = None  # 主订单
         self.stop_loss_order = None  # 止损单
