@@ -8,4 +8,6 @@
 # ./model/*.pth
 *.zip
 **/__pycache__/*
+model/test/__pycache__/
 **/.ipynb_checkpoints/*
+
