@@ -109,8 +109,6 @@ feature_names = [
     name + "_diff" for name in base_feature
 ] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals + other_features
 
-print(feature_names)
-
 # classification labels for model to predict
 label_names = list(
     chain(*[[f"trend_{time}days"] for time in future_time_windows]))

@@ -16,7 +16,8 @@ class BacktestSingleShot(StockTradingEnv):
                  end_date: str,
                  init_fund: float = 1.0e4):
         super().__init__(stock, start_date, end_date, init_fund)
-        self.debug_mode = True
+        print(f">>>>>{stock}:")
+        self.debug_mode = False
 
     def compute_action(self) -> Action:
         date = self.current_step
@@ -55,9 +56,9 @@ class BacktestSingleShot(StockTradingEnv):
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-
-        def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
+
+        def should_buy(pred: NDArray) -> bool:
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
@@ -67,8 +68,7 @@ class BacktestSingleShot(StockTradingEnv):
 
             return False
 
-        def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        def should_sell(pred: NDArray) -> bool:
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
@@ -78,13 +78,13 @@ class BacktestSingleShot(StockTradingEnv):
 
             return False
 
-        if should_sell(probs):  # need to sell
+        if should_sell(pred):  # need to sell
             if self.debug_mode:
                 print(
                     f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(probs):  # good to buy
+        elif should_buy(pred):  # good to buy
             if self.debug_mode:
                 print(
                     f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
@@ -95,7 +95,7 @@ class BacktestSingleShot(StockTradingEnv):
 
     def run(self) -> None:
         done = False
-        print("current_date: ", self.start_date, " end_date: ", self.end_date)
+        # print("current_date: ", self.start_date, " end_date: ", self.end_date)
         try:
             start_price, end_price = self.stock_data.loc[self.start_date][
                 "Close"], self.stock_data.loc[self.end_date]["Close"]
@@ -116,8 +116,8 @@ class BacktestSingleShot(StockTradingEnv):
 
 
 if __name__ == "__main__":
-    start_date = "2025-01-01"
-    end_date = "2025-03-23"
+    start_date = "2021-01-01"
+    end_date = "2021-12-31"
     init_fund = 1.0e4
 
     for stock in MAG7:

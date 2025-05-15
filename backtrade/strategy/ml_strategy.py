@@ -28,6 +28,7 @@ class MLStrategy(bt.Strategy):
     params = (
         ('model', None),  # 机器学习模型
         ('debug_mode', False),  # Enable debug mode and logging
+        ('use_gt_label', False),  # Use ground truth labels for backtest
         ('target_pct', 0.9),
         ('daily_change_perc', 0.05),
         ('predict_type',
@@ -84,6 +85,9 @@ class MLStrategy(bt.Strategy):
         self.model.eval()
 
         self.debug_mode = self.p.debug_mode
+        self.use_gt_label = self.p.use_gt_label
+        if self.use_gt_label:
+            self.log("+++++++++++++Using GT labels for backtest++++++++++++++")
 
     def notify_order(self, order):
         """订单状态更新回调"""
@@ -240,27 +244,34 @@ class MLStrategy(bt.Strategy):
                 )
             return Action.Sell
 
-        features = self.compute_features()
-        if features is None or np.isnan(features).any() or np.isinf(
-                features).any():
-            if self.debug_mode:
-                self.log(
-                    f"NaN or INF detected on {self.data.datetime.datetime(0)}")
-            return Action.Hold
-        else:
-            features_tensor = torch.tensor(features, dtype=torch.float32)
-
         buy_sell_signals_vals = np.array(
             [getattr(self.data, col)[0] for col in buy_sell_signals])
-        with torch.no_grad():
-            logits = self.model(features_tensor)
-            logits = logits.reshape(len(label_names), 3)
-            probs = torch.softmax(
-                logits,
-                dim=1).float().numpy()  # convert logits to probabilities
 
-        def should_buy(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        # Compute buy/sell labels
+        if self.use_gt_label:
+            pred = np.array(
+                [getattr(self.data, col)[0] for col in label_names])
+        else:
+            features = self.compute_features()
+            if features is None or np.isnan(features).any() or np.isinf(
+                    features).any():
+                if self.debug_mode:
+                    self.log(
+                        f"NaN or INF detected on {self.data.datetime.datetime(0)}"
+                    )
+                return Action.Hold
+            else:
+                features_tensor = torch.tensor(features, dtype=torch.float32)
+
+            with torch.no_grad():
+                logits = self.model(features_tensor)
+                logits = logits.reshape(len(label_names), 3)
+                probs = torch.softmax(
+                    logits,
+                    dim=1).float().numpy()  # convert logits to probabilities
+                pred = np.argmax(probs, axis=1)
+
+        def should_buy(pred: NDArray) -> bool:
             if self.p.predict_type == 4:
                 ml_pred_up = np.all(pred == 1)  # all predictions trend up
             else:
@@ -276,8 +287,7 @@ class MLStrategy(bt.Strategy):
 
             return False
 
-        def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        def should_sell(pred: NDArray) -> bool:
             if self.p.predict_type == 4:
                 ml_pred_down = np.all(pred == 2)  # all predictions trend down
             else:
@@ -293,13 +303,13 @@ class MLStrategy(bt.Strategy):
 
             return False
 
-        if should_sell(probs):  # need to sell
+        if should_sell(pred):  # need to sell
             if self.debug_mode:
                 self.log(
                     f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(probs):  # good to buy
+        elif should_buy(pred):  # good to buy
             if self.debug_mode:
                 self.log(
                     f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"

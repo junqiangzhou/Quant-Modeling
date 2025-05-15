@@ -5,7 +5,7 @@ import backtrader as bt
 import pandas as pd
 import numpy as np
 
-from config.config import (feature_names, buy_sell_signals)
+from config.config import (feature_names, buy_sell_signals, label_names)
 
 
 class BacktestRunner:
@@ -151,7 +151,8 @@ def run_backtest(df,
 
     # 定义一个自定义的 PandasData 类
     class PandasDataCustom(bt.feeds.PandasData):
-        lines = tuple(feature_names + buy_sell_signals + ["Earnings_Date"])
+        lines = tuple(feature_names + buy_sell_signals + label_names +
+                      ["Earnings_Date"])
         params = (
             ('datetime', None),  # 使用索引作为日期
             ('open', 'Open'),

@@ -22,9 +22,8 @@ class BacktestSingleShot(StockTradingEnv):
     def compute_action(self) -> Tuple[int, Action]:
         date = self.current_step
 
-        def should_sell(probs: NDArray, buy_sell_signals_vals,
+        def should_sell(pred: NDArray, buy_sell_signals_vals,
                         bearish_signal) -> bool:
-            pred = np.argmax(probs, axis=1)
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
@@ -34,9 +33,8 @@ class BacktestSingleShot(StockTradingEnv):
 
             return False
 
-        def should_buy(probs: NDArray, buy_sell_signals_vals,
+        def should_buy(pred: NDArray, buy_sell_signals_vals,
                        bullish_signal) -> bool:
-            pred = np.argmax(probs, axis=1)
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
@@ -85,8 +83,9 @@ class BacktestSingleShot(StockTradingEnv):
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
+                pred = np.argmax(probs, axis=1)
 
-            if should_sell(probs, buy_sell_signals_vals,
+            if should_sell(pred, buy_sell_signals_vals,
                            bearish_signal):  # need to sell
                 if self.debug_mode:
                     print(
@@ -118,13 +117,14 @@ class BacktestSingleShot(StockTradingEnv):
                         max_5day_buy_prob = probs[0, 1]
                         max_probs = probs
                         max_stock = stock
+                        pred = np.argmax(max_probs, axis=1)
 
             buy_sell_signals_vals = self.stock_data[max_stock].loc[
                 date, buy_sell_signals].values
             bullish_signal = self.stock_data[max_stock].loc[date,
                                                             "Price_Above_MA_5"]
 
-            if should_buy(max_probs, buy_sell_signals_vals,
+            if should_buy(pred, buy_sell_signals_vals,
                           bullish_signal):  # good to buy
                 if self.debug_mode:
                     print(
@@ -142,7 +142,7 @@ class BacktestSingleShot(StockTradingEnv):
                 self.render()
             stock_index, order = self.compute_action()
             action = (stock_index, int(order.value))
-            obs, reward, done, _ = self.step(action)
+            obs, reward, done, _, _ = self.step(action)
 
         print(f"Quant profit: {reward * 100: .2f} %")
 

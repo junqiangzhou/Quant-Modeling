@@ -1,6 +1,7 @@
 from data.data_fetcher import create_dataset
 from data.utils import get_date_back
 from feature.feature import compute_online_feature
+from feature.label import compute_labels
 from model.model import PredictionModel
 from data.stocks_fetcher import MAG7
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
@@ -19,6 +20,7 @@ import random
 import bisect
 
 
+# This file is outdated/duplicated and use backtest_single_shot.py instead
 class BacktestSystem:
 
     def __init__(self,
@@ -32,6 +34,7 @@ class BacktestSystem:
                 shifted_start_date = get_date_back(start_date,
                                                    look_back_window + 30)
                 df = create_dataset(stock, shifted_start_date, end_date)
+                df, _ = compute_labels(df)
                 self.stocks_data_pool[stock] = df
             except ValueError:
                 print(f"{stock} data not available")
@@ -53,6 +56,9 @@ class BacktestSystem:
         self.action = Action.Hold
         self.stocks_hold = collections.defaultdict(int)
         self.cost_base = collections.defaultdict(float)
+        self.use_gt_label = False
+        if self.use_gt_label:
+            print("+++++++++++++Using GT labels for backtest++++++++++++++")
 
     def reset(self):
         self.fund = self.init_fund
@@ -77,29 +83,35 @@ class BacktestSystem:
                     print(f"Must cut loss and sell, {date}")
                 return Action.Sell
 
-        features = compute_online_feature(self.stocks_data_pool[stock], date)
-        if features is None or np.isnan(features).any() or np.isinf(
-                features).any():
-            # print(f"NaN or INF detected in {stock} on {date}")
-            return Action.Hold
-        else:
-            features_tensor = torch.tensor(features, dtype=torch.float32)
-
         buy_sell_signals_vals = self.stocks_data_pool[stock].loc[
             date, buy_sell_signals].values
         bullish_signal = self.stocks_data_pool[stock].loc[date,
                                                           "Price_Above_MA_5"]
         bearish_signal = self.stocks_data_pool[stock].loc[date,
                                                           "Price_Below_MA_5"]
-        with torch.no_grad():
-            logits = self.model(features_tensor)
-            logits = logits.reshape(len(label_names), 3)
-            probs = torch.softmax(
-                logits,
-                dim=1).float().numpy()  # convert logits to probabilities
 
-        def should_buy(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        # Compute buy/sell labels
+        if self.use_gt_label:
+            pred = self.stocks_data_pool[stock].loc[date][label_names].values
+        else:
+            features = compute_online_feature(self.stocks_data_pool[stock],
+                                              date)
+            if features is None or np.isnan(features).any() or np.isinf(
+                    features).any():
+                # print(f"NaN or INF detected in {stock} on {date}")
+                return Action.Hold
+            else:
+                features_tensor = torch.tensor(features, dtype=torch.float32)
+
+            with torch.no_grad():
+                logits = self.model(features_tensor)
+                logits = logits.reshape(len(label_names), 3)
+                probs = torch.softmax(
+                    logits,
+                    dim=1).float().numpy()  # convert logits to probabilities
+                pred = np.argmax(probs, axis=1)
+
+        def should_buy(pred: NDArray) -> bool:
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
@@ -109,8 +121,7 @@ class BacktestSystem:
 
             return False
 
-        def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        def should_sell(pred: NDArray) -> bool:
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
@@ -120,13 +131,13 @@ class BacktestSystem:
 
             return False
 
-        if should_sell(probs):  # need to sell
+        if should_sell(pred):  # need to sell
             if debug_mode:
                 print(
                     f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(probs):  # good to buy
+        elif should_buy(pred):  # good to buy
             if debug_mode:
                 print(
                     f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
