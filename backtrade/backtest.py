@@ -41,7 +41,7 @@ start_date = "2023-01-01"
 end_date = "2024-12-31"
 shifted_start_date = get_date_back(start_date, look_back_window + 30)
 
-strategy_names = ["B&H", "ML"]
+strategy_names = ["B&H", "ML", "ML_gt"]
 trade_metrics = [
     "total_return", "sharpe_ratio", "max_drawdown", "total_trades", "win_rate"
 ]
@@ -99,16 +99,28 @@ for stock in stocks:
                 'debug_mode': False,
                 'use_gt_label': False,
             }
+            # Run with predicted labels
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,
                                              strategy_params=strategy_params,
                                              initial_cash=100000,
                                              commission=0.001)
+            metrics += [results[metric] for metric in trade_metrics]
+
+            # Run with ground truth labels
+            strategy_params["use_gt_label"] = True
+            results, strategy = run_backtest(df=df,
+                                             strategy_class=strategy_class,
+                                             strategy_params=strategy_params,
+                                             initial_cash=100000,
+                                             commission=0.001)
+            metrics += [results[metric] for metric in trade_metrics]
         else:
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,
                                              initial_cash=100000,
                                              commission=0.001)
+            metrics += [results[metric] for metric in trade_metrics]
 
         # viz = False
         # if viz:
@@ -118,7 +130,6 @@ for stock in stocks:
         #     fig.show()
         #     table.show()
 
-        metrics += [results[metric] for metric in trade_metrics]
     metrics_df.loc[stock] = metrics
 
 metrics_df = metrics_df.round(2)
