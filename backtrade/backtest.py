@@ -133,6 +133,7 @@ for stock in stocks:
     metrics_df.loc[stock] = metrics
 
 metrics_df = metrics_df.round(2)
+metrics_df = metrics_df[sorted(metrics_df.columns)]
 metrics_df.to_csv(
     f"./backtrade/backtest_results/backtrade_tests_{start_date}_{end_date}.csv",
     index=True,
