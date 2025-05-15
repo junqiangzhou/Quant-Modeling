@@ -258,9 +258,9 @@ class MLStrategy(bt.Strategy):
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-
-        def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
+
+        def should_buy(pred: NDArray) -> bool:
             if self.p.predict_type == 4:
                 ml_pred_up = np.all(pred == 1)  # all predictions trend up
             else:
@@ -276,8 +276,7 @@ class MLStrategy(bt.Strategy):
 
             return False
 
-        def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        def should_sell(pred: NDArray) -> bool:
             if self.p.predict_type == 4:
                 ml_pred_down = np.all(pred == 2)  # all predictions trend down
             else:
@@ -293,13 +292,13 @@ class MLStrategy(bt.Strategy):
 
             return False
 
-        if should_sell(probs):  # need to sell
+        if should_sell(pred):  # need to sell
             if self.debug_mode:
                 self.log(
                     f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(probs):  # good to buy
+        elif should_buy(pred):  # good to buy
             if self.debug_mode:
                 self.log(
                     f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"

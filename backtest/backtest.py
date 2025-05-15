@@ -19,6 +19,7 @@ import random
 import bisect
 
 
+# This file is outdated/duplicated and use backtest_single_shot.py instead
 class BacktestSystem:
 
     def __init__(self,
@@ -97,9 +98,9 @@ class BacktestSystem:
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-
-        def should_buy(probs: NDArray) -> bool:
             pred = np.argmax(probs, axis=1)
+
+        def should_buy(pred: NDArray) -> bool:
             trend_up_labels = np.sum(pred == 1)
             trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
             if trend_up_labels == len(
@@ -109,8 +110,7 @@ class BacktestSystem:
 
             return False
 
-        def should_sell(probs: NDArray) -> bool:
-            pred = np.argmax(probs, axis=1)
+        def should_sell(pred: NDArray) -> bool:
             trend_down_labels = np.sum(pred == 2)
             trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
             if trend_down_labels == len(
@@ -120,13 +120,13 @@ class BacktestSystem:
 
             return False
 
-        if should_sell(probs):  # need to sell
+        if should_sell(pred):  # need to sell
             if debug_mode:
                 print(
                     f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(probs):  # good to buy
+        elif should_buy(pred):  # good to buy
             if debug_mode:
                 print(
                     f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
