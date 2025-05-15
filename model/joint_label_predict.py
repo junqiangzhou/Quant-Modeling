@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import os
 
 from model.model import PredictionModel
 
@@ -33,18 +34,22 @@ class JointLabelPredictor:
             torch.load(f"./model/export/{trend_model_name}.pth"))
         self.trend_model.eval()
 
-        self.price_model = PredictionModel(feature_len=len(feature_names),
-                                           seq_len=look_back_window,
-                                           encoder_type=ENCODER_TYPE)
-        self.price_model.load_state_dict(
-            torch.load(f"./model/export/{price_model_name}.pth"))
-        self.price_model.eval()
+        if os.path.exists(f"./model/export/{price_model_name}.pth"):
+            self.price_model = PredictionModel(feature_len=len(feature_names),
+                                               seq_len=look_back_window,
+                                               encoder_type=ENCODER_TYPE)
+            self.price_model.load_state_dict(
+                torch.load(f"./model/export/{price_model_name}.pth"))
+            self.price_model.eval()
 
     def predict(self, features):
         # Predict trend and price labels
         with torch.no_grad():
             trend_logits = self.trend_model(features)
-            price_logits = self.price_model(features)
+            if self.price_model is not None:
+                price_logits = self.price_model(features)
+            else:
+                price_logits = torch.zeros_like(trend_logits)
 
             trend_logits = trend_logits.reshape(len(label_names), 3)
             price_logits = price_logits.reshape(len(label_names), 3)

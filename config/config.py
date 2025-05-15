@@ -36,7 +36,8 @@ LABEL_TYPE = LabelType.TREND
 
 # The name of the model to be exported and loaded
 # The model is saved in the model directory
-MODEL_EXPORT_NAME = f"{LABEL_TYPE.name.lower()}_model_cpu_v4" if device.type == 'cpu' else f"{LABEL_TYPE.name.lower()}_model_gpu_v4"
+version = "v5"
+MODEL_EXPORT_NAME = f"{LABEL_TYPE.name.lower()}_model_cpu_{version}" if device.type == 'cpu' else f"{LABEL_TYPE.name.lower()}_model_gpu_{version}"
 
 
 class Action(Enum):
@@ -79,19 +80,25 @@ other_features = ["daily_change"]
 
 # List of signals to determine buy/sell points
 buy_sell_signals = [
-    "MA_5_20_Crossover_Signal",  # "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal", 
-    "MA_10_50_Crossover_Signal",  # "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
+    "MA_5_20_Crossover_Signal",
+    "MA_5_10_Crossover_Signal",
+    "MA_5_50_Crossover_Signal",
+    # "MA_10_50_Crossover_Signal",
+    "MA_10_20_Crossover_Signal",
+    "MA_20_50_Crossover_Signal",
     "MACD_Crossover_Signal",
-    "RSI_Over_Bought_Signal",
-    "BB_Signal",  # "VWAP_Crossover_Signal"
+    # "RSI_Over_Bought_Signal",
+    # "BB_Signal",
+    "VWAP_Crossover_Signal"
 ]
 
 # Other crossover signals that are not in buy_sell_signals but can be used as features
-other_crossover_signals = [
-    "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
-    "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
-    "VWAP_Crossover_Signal"
-]
+# other_crossover_signals = [
+#     "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
+#     "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
+#     "VWAP_Crossover_Signal"
+# ]
+other_crossover_signals = []
 
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals
@@ -101,6 +108,8 @@ buy_sell_signals_encoded = [
 feature_names = [
     name + "_diff" for name in base_feature
 ] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals + other_features
+
+print(feature_names)
 
 # classification labels for model to predict
 label_names = list(

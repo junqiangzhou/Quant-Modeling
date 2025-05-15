@@ -36,4 +36,4 @@ def test_compute_labels(mock_fetch_data):
     assert not df.empty
     assert len(df["stock"].unique()) == 1  # Two stocks: AAPL
     assert len(df) == 61  # Number of days between start_date and end_date
-    assert len(df.columns) == 88
+    assert len(df.columns) == 94

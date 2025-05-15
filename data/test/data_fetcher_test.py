@@ -32,7 +32,7 @@ def test_main_integration(mock_fetch_stocks):
     assert len(output_df["stock"].unique()) == 2  # Two stocks: AAPL and MSFT
     assert len(
         output_df) == 124  # Number of days between start_date and end_date
-    assert len(output_df.columns) == 68
+    assert len(output_df.columns) == 74
 
 
 @pytest.fixture

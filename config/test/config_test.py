@@ -6,20 +6,22 @@ expected_feature_names = [
     'Open_diff', 'High_diff', 'Low_diff', 'Close_diff', 'Volume_diff',
     'MA_5_diff', 'MA_10_diff', 'MA_20_diff', 'MA_50_diff',
     'MA_5_20_Crossover_Signal_0', 'MA_5_20_Crossover_Signal_-1',
-    'MA_5_20_Crossover_Signal_1', 'MA_10_50_Crossover_Signal_0',
-    'MA_10_50_Crossover_Signal_-1', 'MA_10_50_Crossover_Signal_1',
-    'MACD_Crossover_Signal_0', 'MACD_Crossover_Signal_-1',
-    'MACD_Crossover_Signal_1', 'RSI_Over_Bought_Signal_0',
-    'RSI_Over_Bought_Signal_-1', 'RSI_Over_Bought_Signal_1', 'BB_Signal_0',
-    'BB_Signal_-1', 'BB_Signal_1', 'Price_Above_MA_5', 'Price_Below_MA_5',
-    'MA_5_10_Crossover_Signal', 'MA_5_50_Crossover_Signal',
-    'MA_10_20_Crossover_Signal', 'MA_20_50_Crossover_Signal',
-    'VWAP_Crossover_Signal', 'daily_change'
+    'MA_5_20_Crossover_Signal_1', 'MA_5_10_Crossover_Signal_0',
+    'MA_5_10_Crossover_Signal_-1', 'MA_5_10_Crossover_Signal_1',
+    'MA_5_50_Crossover_Signal_0', 'MA_5_50_Crossover_Signal_-1',
+    'MA_5_50_Crossover_Signal_1', 'MA_10_20_Crossover_Signal_0',
+    'MA_10_20_Crossover_Signal_-1', 'MA_10_20_Crossover_Signal_1',
+    'MA_20_50_Crossover_Signal_0', 'MA_20_50_Crossover_Signal_-1',
+    'MA_20_50_Crossover_Signal_1', 'MACD_Crossover_Signal_0',
+    'MACD_Crossover_Signal_-1', 'MACD_Crossover_Signal_1',
+    'VWAP_Crossover_Signal_0', 'VWAP_Crossover_Signal_-1',
+    'VWAP_Crossover_Signal_1', 'Price_Above_MA_5', 'Price_Below_MA_5',
+    'daily_change'
 ]
 
 
 def test_feature_names_match_expected():
-    assert len(feature_names) == 32
+    assert len(feature_names) == 33
     assert feature_names == expected_feature_names, "Feature names do not match the expected list"
 
 

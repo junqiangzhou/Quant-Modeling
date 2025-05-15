@@ -31,7 +31,7 @@ class MLStrategy(bt.Strategy):
         ('target_pct', 0.9),
         ('daily_change_perc', 0.05),
         ('predict_type',
-            4),  # determines how to choose buy/sell action based on prediction
+         4),  # determines how to choose buy/sell action based on prediction
     )
 
     def log(self, txt, dt=None):
