@@ -32,6 +32,7 @@ from config.config import look_back_window
 from data.data_fetcher import create_dataset
 from data.stocks_fetcher import fetch_stocks
 from data.utils import get_date_back
+from feature.label import compute_labels
 
 plt.style.use("seaborn-darkgrid")
 pd.set_option('display.max_columns', None)
@@ -71,6 +72,7 @@ for stock in stocks:
     print(f"\n>>>>>>>>>>stock: {stock}")
     try:
         df = create_dataset(stock, shifted_start_date, end_date)
+        df, _ = compute_labels(df)
         df.index = pd.to_datetime(df.index)
         df = df[start_date:]
     except:
@@ -95,6 +97,7 @@ for stock in stocks:
                 'target_pct': 0.9,
                 'daily_change_perc': daily_change_perc,
                 'debug_mode': False,
+                'use_gt_label': False,
             }
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,
