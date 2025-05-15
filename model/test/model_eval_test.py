@@ -86,10 +86,10 @@ def test_model_integration(mock_fetch_stocks):
                        [0, 1, 2])), "Prediction labels should be in {0, 1, 2}"
 
     # Check the distribution of labels in each label
-    assert (predict_labels[:, 0] == 0).sum(axis=0) == 95
-    assert (predict_labels[:, 0] == 1).sum(axis=0) == 9
-    assert (predict_labels[:, 0] == 2).sum(axis=0) == 4
+    assert (predict_labels[:, 0] == 0).sum(axis=0) == 77
+    assert (predict_labels[:, 0] == 1).sum(axis=0) == 21
+    assert (predict_labels[:, 0] == 2).sum(axis=0) == 10
 
-    assert (predict_labels[:, -1] == 0).sum(axis=0) == 96
-    assert (predict_labels[:, -1] == 1).sum(axis=0) == 9
-    assert (predict_labels[:, -1] == 2).sum(axis=0) == 3
+    assert (predict_labels[:, -1] == 0).sum(axis=0) == 89
+    assert (predict_labels[:, -1] == 1).sum(axis=0) == 19
+    assert (predict_labels[:, -1] == 2).sum(axis=0) == 0

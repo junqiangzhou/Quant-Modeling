@@ -36,8 +36,8 @@ def test_create_batch_feature(mock_fetch_data):
     features, labels, dates = create_batch_feature(df)
 
     # Check if the labels are computed correctly
-    assert features.shape == (6, 50, 32
-                              )  # 6 samples, 50 timesteps, 32 features
+    assert features.shape == (6, 50, 33
+                              )  # 6 samples, 50 timesteps, 33 features
     assert labels.shape == (6, 4)  # 6 samples, 4 labels
     assert dates.shape == (6, )  # 6 samples
 
@@ -54,5 +54,5 @@ def test_compute_online_feature(mock_fetch_data):
     features_scaled = compute_online_feature(df, date)
     # Check if the features are computed correctly
     assert features_scaled is not None
-    assert features_scaled.shape == (1, 50, 32
-                                     )  # 1 sample, 50 timesteps, 32 features
+    assert features_scaled.shape == (1, 50, 33
+                                     )  # 1 sample, 50 timesteps, 33 features
