@@ -6,7 +6,7 @@ import os
 from data.data_fetcher import create_dataset
 from feature.label import compute_labels
 from feature.feature import compute_online_feature, create_batch_feature
-from data.utils import save_to_csv, load_from_csv
+from data.utils import save_to_csv, load_from_csv, normalize_date
 
 
 @pytest.fixture
@@ -44,12 +44,12 @@ def test_create_batch_feature(mock_fetch_data):
 def test_compute_online_feature(mock_fetch_data):
     df = mock_fetch_data
 
-    date = datetime(2023, 1, 20)
+    date = normalize_date("2023-01-20")
     features_scaled = compute_online_feature(df, date)
     # Check if the features are computed correctly
     assert features_scaled is None
 
-    date = datetime(2023, 3, 24)
+    date = normalize_date("2023-03-24")
     features_scaled = compute_online_feature(df, date)
     # Check if the features are computed correctly
     assert features_scaled is not None
