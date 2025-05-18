@@ -1,5 +1,5 @@
 from data.data_fetcher import create_dataset
-from data.utils import get_date_back
+from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
 from feature.label import compute_labels
 from model.model import PredictionModel
@@ -10,7 +10,7 @@ from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
 
 from typing import List
 from numpy.typing import NDArray
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import torch
 import pandas as pd
 import numpy as np
@@ -38,8 +38,10 @@ class BacktestSystem:
                 self.stocks_data_pool[stock] = df
             except ValueError:
                 print(f"{stock} data not available")
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-        self.start_date = df.index[bisect.bisect_left(df.index, start_date)]
+        start_date = normalize_date(start_date)
+        while start_date not in df.index:
+            start_date += timedelta(days=1)
+        self.start_date = start_date
         self.end_date = df.index[-1]
 
         # Load the saved parameters
@@ -67,35 +69,34 @@ class BacktestSystem:
         self.action = Action.Hold
 
     def compute_action(self, stock: str, date: datetime) -> Action:
+        df = self.stocks_data_pool[stock]
+        if date not in df.index:
+            # print(f"skip due to date {date} not in table")
+            return Action.Hold
+
         # Must sell all shares before earnings day
-        if date in self.stocks_data_pool[stock].index and self.stocks_data_pool[
-                stock].loc[date]["Earnings_Date"]:
+        if df.loc[date]["Earnings_Date"]:
             if debug_mode:
                 print(f"Earnings day must sell, {date}")
             return Action.Sell
 
         # Must sell to cut-loss
-        if date in self.stocks_data_pool[stock].index:
-            cost_base = self.cost_base[stock]
-            price = self.stocks_data_pool[stock].loc[date]["Close"]
-            if price < cost_base * 0.92:
-                if debug_mode:
-                    print(f"Must cut loss and sell, {date}")
-                return Action.Sell
+        cost_base = self.cost_base[stock]
+        price = df.loc[date]["Close"]
+        if price < cost_base * 0.92:
+            if debug_mode:
+                print(f"Must cut loss and sell, {date}")
+            return Action.Sell
 
-        buy_sell_signals_vals = self.stocks_data_pool[stock].loc[
-            date, buy_sell_signals].values
-        bullish_signal = self.stocks_data_pool[stock].loc[date,
-                                                          "Price_Above_MA_5"]
-        bearish_signal = self.stocks_data_pool[stock].loc[date,
-                                                          "Price_Below_MA_5"]
+        buy_sell_signals_vals = df.loc[date, buy_sell_signals].values
+        bullish_signal = df.loc[date, "Price_Above_MA_5"]
+        bearish_signal = df.loc[date, "Price_Below_MA_5"]
 
         # Compute buy/sell labels
         if self.use_gt_label:
-            pred = self.stocks_data_pool[stock].loc[date][label_names].values
+            pred = df.loc[date][label_names].values
         else:
-            features = compute_online_feature(self.stocks_data_pool[stock],
-                                              date)
+            features = compute_online_feature(df, date)
             if features is None or np.isnan(features).any() or np.isinf(
                     features).any():
                 # print(f"NaN or INF detected in {stock} on {date}")
@@ -201,7 +202,7 @@ if __name__ == "__main__":
 
     for end_date in end_dates:
         testing = BacktestSystem(testing_stocks, start_date, end_date)
-        print("current_date: ", start_date, " end_date: ", end_date)
+        # print("current_date: ", start_date, " end_date: ", end_date)
         for stock in testing_stocks:
             testing.reset()
 

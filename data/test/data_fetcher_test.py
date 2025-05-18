@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 from data.data_fetcher import create_dataset, add_earnings_data, preprocess_data, download_data
+from data.utils import save_to_csv
 
 
 @pytest.fixture
@@ -25,9 +26,7 @@ def test_main_integration(mock_fetch_stocks):
             output_df = pd.concat([output_df, df], ignore_index=False)
 
     # Verify the content of the output file
-    output_df.to_csv(f"./data/test/test_{start_date}_{end_date}.csv",
-                     index=True,
-                     index_label="Date")
+    save_to_csv(output_df, f"./data/test/test_{start_date}_{end_date}.csv")
     assert not output_df.empty
     assert len(output_df["stock"].unique()) == 2  # Two stocks: AAPL and MSFT
     assert len(

@@ -1,5 +1,5 @@
 from data.data_fetcher import create_dataset
-from data.utils import get_date_back
+from data.utils import get_date_back, save_to_csv
 from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_inf_in_tensor, check_nan_in_tensor, StockDataset
@@ -200,6 +200,5 @@ if __name__ == "__main__":
             df_all = pd.concat([df_all, df], ignore_index=False)
         count = next_count
 
-    df_all.to_csv(f"./data/dataset/stock_testing_{start_date}_{end_date}.csv",
-                  index=True,
-                  index_label="Date")
+    save_to_csv(df_all,
+                f"./data/dataset/stock_testing_{start_date}_{end_date}.csv")

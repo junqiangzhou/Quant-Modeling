@@ -1,5 +1,5 @@
 from data.data_fetcher import create_dataset
-from data.utils import get_date_back
+from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
 from model.model import PredictionModel
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
@@ -56,7 +56,7 @@ class StockTradingEnv(gym.Env):
         self.portfolio = init_fund
 
         self.index = df.index
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+        start_date = normalize_date(start_date)
         start_index = bisect.bisect_left(self.index, start_date)
         self.start_date = self.index[start_index]
         self.end_date = self.index[-1]

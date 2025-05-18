@@ -4,6 +4,7 @@ import pandas as pd
 
 from data.data_fetcher import create_dataset
 from feature.label import compute_labels
+from data.utils import save_to_csv, load_from_csv
 
 
 @pytest.fixture
@@ -18,11 +19,9 @@ def mock_fetch_data():
     csv_file = f"./feature/test/test_{stock}_{start_date}_{end_date}.csv"
     if not os.path.exists(csv_file):
         df = create_dataset(stock, start_date, end_date)
-        df.to_csv(csv_file, index=True, index_label="Date")
+        save_to_csv(df, csv_file)
     else:
-        df = pd.read_csv(csv_file)
-        df.set_index('Date', inplace=True)
-        df.index = pd.to_datetime(df.index, utc=True)
+        df = load_from_csv(csv_file)
 
     return df
 
