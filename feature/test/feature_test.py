@@ -6,6 +6,7 @@ import os
 from data.data_fetcher import create_dataset
 from feature.label import compute_labels
 from feature.feature import compute_online_feature, create_batch_feature
+from data.utils import save_to_csv, load_from_csv, normalize_date
 
 
 @pytest.fixture
@@ -20,11 +21,9 @@ def mock_fetch_data():
     csv_file = f"./feature/test/test_{stock}_{start_date}_{end_date}.csv"
     if not os.path.exists(csv_file):
         df = create_dataset(stock, start_date, end_date)
-        df.to_csv(csv_file, index=True, index_label="Date")
+        save_to_csv(df, csv_file)
     else:
-        df = pd.read_csv(csv_file)
-        df.set_index('Date', inplace=True)
-        df.index = pd.to_datetime(df.index, utc=True).date
+        df = load_from_csv(csv_file)
 
     df, _ = compute_labels(df)
     return df
@@ -45,12 +44,12 @@ def test_create_batch_feature(mock_fetch_data):
 def test_compute_online_feature(mock_fetch_data):
     df = mock_fetch_data
 
-    date = datetime(2023, 1, 20).date()
+    date = normalize_date("2023-01-20")
     features_scaled = compute_online_feature(df, date)
     # Check if the features are computed correctly
     assert features_scaled is None
 
-    date = datetime(2023, 3, 24).date()
+    date = normalize_date("2023-03-24")
     features_scaled = compute_online_feature(df, date)
     # Check if the features are computed correctly
     assert features_scaled is not None

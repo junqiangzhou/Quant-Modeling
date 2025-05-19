@@ -1,9 +1,7 @@
 # import sys
 import os
 
-# sys.path.append(os.path.abspath('..'))
-
-from data.utils import get_stock_df
+from data.utils import get_stock_df, save_to_csv, load_from_csv
 from feature.label import compute_labels
 from feature.feature import create_batch_feature
 from model.utils import check_nan_in_tensor, check_inf_in_tensor, StockDataset
@@ -266,10 +264,7 @@ if __name__ == "__main__":
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")
     else:
-        df_all = pd.read_csv(csv_file)
-        df_all['Date'] = pd.to_datetime(df_all['Date'])
-        df_all.set_index('Date', inplace=True)
-        df_all.index = df_all.index.date
+        df_all = load_from_csv(csv_file)
 
     stocks = df_all['stock'].unique()
     all_features, all_labels, all_dates = None, None, None

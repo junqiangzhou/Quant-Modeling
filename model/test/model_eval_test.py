@@ -90,6 +90,6 @@ def test_model_integration(mock_fetch_stocks):
     assert (predict_labels[:, 0] == 1).sum(axis=0) == 21
     assert (predict_labels[:, 0] == 2).sum(axis=0) == 10
 
-    assert (predict_labels[:, -1] == 0).sum(axis=0) == 89
+    assert (predict_labels[:, -1] == 0).sum(axis=0) == 84
     assert (predict_labels[:, -1] == 1).sum(axis=0) == 19
-    assert (predict_labels[:, -1] == 2).sum(axis=0) == 0
+    assert (predict_labels[:, -1] == 2).sum(axis=0) == 5

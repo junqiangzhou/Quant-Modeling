@@ -41,3 +41,26 @@ def one_hot_encoder(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.join(df_dummies[buy_sell_signals_encoded])
     return df
+
+
+def normalize_date(date: str) -> datetime:
+    date = pd.to_datetime(date).normalize().tz_localize("UTC")
+    return date
+
+
+def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
+    df.index = df.index.tz_convert("UTC")
+    df.index = df.index.normalize()
+    return df
+
+
+def save_to_csv(df: pd.DataFrame, file_path: str) -> None:
+    # save df to csv file.
+    df.to_csv(file_path, index=True, index_label="Date")
+
+
+def load_from_csv(file_path: str) -> pd.DataFrame:
+    df = pd.read_csv(file_path)
+    df.set_index('Date', inplace=True)
+    df.index = pd.to_datetime(df.index, utc=True)
+    return df

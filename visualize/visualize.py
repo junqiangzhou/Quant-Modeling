@@ -1,4 +1,4 @@
-from data.utils import get_stock_df
+from data.utils import get_stock_df, load_from_csv
 from config.config import label_names
 
 import pandas as pd
@@ -97,9 +97,7 @@ if __name__ == "__main__":
         raise FileNotFoundError(
             f"Please run data_fetcher.py to download the data first.")
     else:
-        df_all = pd.read_csv(csv_file)
-        df_all['Date'] = pd.to_datetime(df_all['Date'])
-        df_all.set_index('Date', inplace=True)
+        df_all = load_from_csv(csv_file)
 
     stocks = df_all['stock'].unique()
     for stock in stocks:
