@@ -5,6 +5,7 @@ from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, feature_names,
                            look_back_window, Action, label_names,
                            buy_sell_signals)
 from feature.feature import compute_online_feature, normalize_features
+from strategy.rule_based import should_buy, should_sell
 
 import torch
 from datetime import datetime
@@ -31,8 +32,6 @@ class MLStrategy(bt.Strategy):
         ('use_gt_label', False),  # Use ground truth labels for backtest
         ('target_pct', 0.9),
         ('daily_change_perc', 0.05),
-        ('predict_type',
-         4),  # determines how to choose buy/sell action based on prediction
     )
 
     def log(self, txt, dt=None):
@@ -246,6 +245,8 @@ class MLStrategy(bt.Strategy):
 
         buy_sell_signals_vals = np.array(
             [getattr(self.data, col)[0] for col in buy_sell_signals])
+        price_above_ma = getattr(self.data, "Price_Above_MA_5")[0] == 1
+        price_below_ma = getattr(self.data, "Price_Below_MA_5")[0] == 1
 
         # Compute buy/sell labels
         if self.use_gt_label:
@@ -271,45 +272,15 @@ class MLStrategy(bt.Strategy):
                     dim=1).float().numpy()  # convert logits to probabilities
                 pred = np.argmax(probs, axis=1)
 
-        def should_buy(pred: NDArray) -> bool:
-            if self.p.predict_type == 4:
-                ml_pred_up = np.all(pred == 1)  # all predictions trend up
-            else:
-                if self.p.predict_type not in [0, 1, 2, 3]:
-                    raise ValueError(
-                        f"Invalid predict_type: {self.p.predict_type}")
-                index = self.p.predict_type
-                ml_pred_up = pred[index] == 1  # 5-day prediction trends up
-            trend_up_indicators = np.sum(buy_sell_signals_vals) > 0
-            price_above_ma = getattr(self.data, "Price_Above_MA_5")[0] == 1
-            if ml_pred_up and trend_up_indicators and price_above_ma:
-                return True
-
-            return False
-
-        def should_sell(pred: NDArray) -> bool:
-            if self.p.predict_type == 4:
-                ml_pred_down = np.all(pred == 2)  # all predictions trend down
-            else:
-                if self.p.predict_type not in [0, 1, 2, 3]:
-                    raise ValueError(
-                        f"Invalid predict_type: {self.p.predict_type}")
-                index = self.p.predict_type
-                ml_pred_down = pred[index] == 2  # 5-day prediction trends down
-            trend_down_indicators = np.sum(buy_sell_signals_vals) < 0
-            price_below_ma = getattr(self.data, "Price_Below_MA_5")[0] == 1
-            if ml_pred_down and trend_down_indicators and price_below_ma:
-                return True
-
-            return False
-
-        if should_sell(pred):  # need to sell
+        if should_sell(pred, buy_sell_signals_vals,
+                       price_below_ma):  # need to sell
             if self.debug_mode:
                 self.log(
                     f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(pred):  # good to buy
+        elif should_buy(pred, buy_sell_signals_vals,
+                        price_above_ma):  # good to buy
             if self.debug_mode:
                 self.log(
                     f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"
