@@ -108,6 +108,7 @@ for stock in stocks:
             metrics += [results[metric] for metric in trade_metrics]
 
             # Run with ground truth labels
+            print("\n")
             strategy_params["use_gt_label"] = True
             results, strategy = run_backtest(df=df,
                                              strategy_class=strategy_class,

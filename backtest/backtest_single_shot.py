@@ -2,6 +2,7 @@ from rl.single_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
+from strategy.rule_based import should_buy, should_sell
 
 from numpy.typing import NDArray
 import numpy as np
@@ -47,8 +48,8 @@ class BacktestSingleShot(StockTradingEnv):
 
         buy_sell_signals_vals = self.stock_data.loc[date,
                                                     buy_sell_signals].values
-        bullish_signal = self.stock_data.loc[date, "Price_Above_MA_5"]
-        bearish_signal = self.stock_data.loc[date, "Price_Below_MA_5"]
+        price_above_ma = self.stock_data.loc[date, "Price_Above_MA_5"] == 1
+        price_below_ma = self.stock_data.loc[date, "Price_Below_MA_5"] == 1
 
         with torch.no_grad():
             logits = self.prediction_model(features_tensor)
@@ -58,33 +59,13 @@ class BacktestSingleShot(StockTradingEnv):
                 dim=1).float().numpy()  # convert logits to probabilities
             pred = np.argmax(probs, axis=1)
 
-        def should_buy(pred: NDArray) -> bool:
-            trend_up_labels = np.sum(pred == 1)
-            trend_up_indicators = np.sum(buy_sell_signals_vals == 1)
-            if trend_up_labels == len(
-                    label_names
-            ) and trend_up_indicators >= 1 and bullish_signal == 1:
-                return True
-
-            return False
-
-        def should_sell(pred: NDArray) -> bool:
-            trend_down_labels = np.sum(pred == 2)
-            trend_down_indicators = np.sum(buy_sell_signals_vals == -1)
-            if trend_down_labels == len(
-                    label_names
-            ) and trend_down_indicators >= 1 and bearish_signal == 1:
-                return True
-
-            return False
-
-        if should_sell(pred):  # need to sell
+        if should_sell(pred, buy_sell_signals_vals, price_below_ma):  # need to sell
             if self.debug_mode:
                 print(
                     f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(pred):  # good to buy
+        elif should_buy(pred, buy_sell_signals_vals, price_above_ma):  # good to buy
             if self.debug_mode:
                 print(
                     f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
