@@ -76,7 +76,7 @@ macd_feature = ['MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9']
 kdj_feature = ["STOCHk_14_3_3", "STOCHd_14_3_3", "J"]
 rsi_feature = ["RSI_14"]
 bullish_bearish_signals = ["Price_Above_MA_5", "Price_Below_MA_5"]
-other_features = ["daily_change"]
+
 
 # List of signals to determine buy/sell points
 buy_sell_signals = [
@@ -93,12 +93,7 @@ buy_sell_signals = [
 ]
 
 # Other crossover signals that are not in buy_sell_signals but can be used as features
-# other_crossover_signals = [
-#     "MA_5_10_Crossover_Signal", "MA_5_50_Crossover_Signal",
-#     "MA_10_20_Crossover_Signal", "MA_20_50_Crossover_Signal",
-#     "VWAP_Crossover_Signal"
-# ]
-other_crossover_signals = []
+other_features = ["daily_change", "MA_10_50_Crossover_Signal", "RSI_Over_Bought_Signal", "BB_Signal"]
 
 buy_sell_signals_encoded = [
     f"{signal}_{suffix}" for signal in buy_sell_signals
@@ -107,7 +102,7 @@ buy_sell_signals_encoded = [
 
 feature_names = [
     name + "_diff" for name in base_feature
-] + buy_sell_signals_encoded + bullish_bearish_signals + other_crossover_signals + other_features
+] + buy_sell_signals_encoded + bullish_bearish_signals + other_features
 
 # classification labels for model to predict
 label_names = list(
