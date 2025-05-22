@@ -162,8 +162,8 @@ class MLStrategy(bt.Strategy):
                         f"[警告] cancel take profit order: {order.status}, {order.info}"
                     )
             self.order = None
-            self.stop_loss_order = None
-            self.take_profit_order = None
+            # self.stop_loss_order = None
+            # self.take_profit_order = None
 
     def notify_trade(self, trade):
         if not trade.isclosed:
