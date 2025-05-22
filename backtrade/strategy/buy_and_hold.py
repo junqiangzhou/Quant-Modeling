@@ -19,7 +19,7 @@ class BuyAndHoldStrategy(bt.Strategy):
         ('risk_per_trade', 0.01),  # 单笔风险占总资金的1%
         ('atr_period', 14),  # ATR周期
         ('atr_risk_factor', 2.0),  # ATR风险系数（确定止损距离）
-    )
+        ('debug_mode', False))
 
     def log(self, txt, dt=None):
         """自定义日志函数，可在调试或回测时使用"""
@@ -38,7 +38,7 @@ class BuyAndHoldStrategy(bt.Strategy):
             self.atr = bt.indicators.ATR(self.datas[0],
                                          period=self.p.atr_period)
 
-        self.debug_mode = False
+        self.debug_mode = self.p.debug_mode
 
     def notify_order(self, order):
         """订单状态更新回调"""

@@ -32,6 +32,8 @@ class MLStrategy(bt.Strategy):
         ('use_gt_label', False),  # Use ground truth labels for backtest
         ('target_pct', 0.9),
         ('daily_change_perc', 0.05),
+        ('earning_day_sell', False),  # Force to sell before earning day
+        ('take_profit', False),
     )
 
     def log(self, txt, dt=None):
@@ -63,7 +65,8 @@ class MLStrategy(bt.Strategy):
         self.dataclose = self.datas[0].close
 
         self.stop_loss = self.p.daily_change_perc * 2.0
-        self.take_profit = self.p.daily_change_perc * 12.0
+        self.take_profit = self.p.daily_change_perc * 12.0 if self.p.take_profit else float(
+            'inf')
         # ========== 2. 跟踪订单和止盈止损单 ==========
         self.order = None  # 主订单
         self.stop_loss_order = None  # 止损单
@@ -85,6 +88,7 @@ class MLStrategy(bt.Strategy):
 
         self.debug_mode = self.p.debug_mode
         self.use_gt_label = self.p.use_gt_label
+        self.earning_day_sell = self.p.earning_day_sell
         if self.use_gt_label:
             self.log("+++++++++++++Using GT labels for backtest++++++++++++++")
 
@@ -236,7 +240,7 @@ class MLStrategy(bt.Strategy):
 
     def compute_action(self) -> Action:
         # Must sell all shares before earnings day
-        if getattr(self.data, "Earnings_Date")[0]:
+        if self.earning_day_sell and getattr(self.data, "Earnings_Date")[0]:
             if self.debug_mode:
                 self.log(
                     f"Earnings day must sell, {self.data.datetime.datetime(0)}"
@@ -276,14 +280,14 @@ class MLStrategy(bt.Strategy):
                        price_below_ma):  # need to sell
             if self.debug_mode:
                 self.log(
-                    f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending down {probs[:, 2]}"
+                    f"------Predicted to sell, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}"
                 )
             return Action.Sell
         elif should_buy(pred, buy_sell_signals_vals,
                         price_above_ma):  # good to buy
             if self.debug_mode:
                 self.log(
-                    f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}, prob. of trending up {probs[:, 1]}"
+                    f"++++++Predicted to buy, {self.data.datetime.datetime(0)}, close price {self.data.close[0]:.2f}"
                 )
             return Action.Buy
         else:

@@ -53,8 +53,8 @@ class BacktestSingleShot(StockTradingEnv):
 
             buy_sell_signals_vals = self.stock_data[stock].loc[
                 date, buy_sell_signals].values
-            price_below_ma = self.stock_data[stock].loc[date,
-                                                        "Price_Below_MA_5"] == 1
+            price_below_ma = self.stock_data[stock].loc[
+                date, "Price_Below_MA_5"] == 1
 
             with torch.no_grad():
                 logits = self.prediction_model(features_tensor)
@@ -100,8 +100,8 @@ class BacktestSingleShot(StockTradingEnv):
 
             buy_sell_signals_vals = self.stock_data[max_stock].loc[
                 date, buy_sell_signals].values
-            price_above_ma = self.stock_data[max_stock].loc[date,
-                                                            "Price_Above_MA_5"] == 1
+            price_above_ma = self.stock_data[max_stock].loc[
+                date, "Price_Above_MA_5"] == 1
 
             if should_buy(pred, buy_sell_signals_vals,
                           price_above_ma):  # good to buy
