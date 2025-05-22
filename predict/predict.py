@@ -44,7 +44,7 @@ for i, stock in enumerate(stocks):
     start_date = get_date_back(today, look_back_window + 30)
 
     try:
-        df = create_dataset(stock, start_date, today, session=session)
+        df = create_dataset(stock, start_date, today)
     except:
         print(f"{stock} data not available")
         continue
