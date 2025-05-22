@@ -59,7 +59,7 @@ class BacktestSystem:
         self.action = Action.Hold
         self.stocks_hold = collections.defaultdict(int)
         self.cost_base = collections.defaultdict(float)
-        self.use_gt_label = False
+        self.use_gt_label = True
         if self.use_gt_label:
             print("+++++++++++++Using GT labels for backtest++++++++++++++")
 
@@ -169,6 +169,15 @@ class BacktestSystem:
 
         return self.fund + equity - self.init_fund
 
+    def render(self, date):
+        """Render the current state (for debugging)."""
+        portfolio = self.get_profit(date) + self.init_fund
+        shares = list(self.stocks_hold.values())
+        cost_base = list(self.cost_base.values())
+        print(
+            f'Step: {date}, Balance: {self.fund:.2f}, Holdings: {shares[0] :.1f}, Portfolio: {portfolio:.2f}, Cost base: {cost_base[0]: .2f}'
+        )
+
 
 if __name__ == "__main__":
     random.seed(random_seed)  # use different seed from data_fetcher
@@ -212,6 +221,10 @@ if __name__ == "__main__":
                     testing.buy(stock, current_date)
                 elif action == Action.Sell:
                     testing.sell(stock, current_date)
+
+                if debug_mode and current_date in testing.stocks_data_pool[
+                        stock].index:
+                    testing.render(current_date)
 
                 current_date += timedelta(days=1)
             print(
