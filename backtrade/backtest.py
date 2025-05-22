@@ -39,7 +39,8 @@ pd.set_option('display.max_columns', None)
 
 start_date = "2023-01-01"
 end_date = "2024-12-31"
-shifted_start_date = get_date_back(start_date, look_back_window + 30)
+start_date_collect_data = get_date_back(start_date,
+                                        (look_back_window + 50) * 1.5)
 
 strategy_names = ["B&H", "ML", "ML_gt"]
 trade_metrics = [
@@ -71,10 +72,11 @@ stocks = MAG7 + PICKS
 for stock in stocks:
     print(f"\n>>>>>>>>>>stock: {stock}")
     try:
-        df = create_dataset(stock, shifted_start_date, end_date)
+        df = create_dataset(stock, start_date_collect_data, end_date)
+        start_date_backtest = get_date_back(start_date, look_back_window * 1.5)
+        df = df[start_date_backtest:]
         df, _ = compute_labels(df)
-        df.index = pd.to_datetime(df.index)
-        df = df[start_date:]
+        # df.index = pd.to_datetime(df.index)
     except:
         print(f"{stock} data not available")
         continue
@@ -117,10 +119,11 @@ for stock in stocks:
                                              commission=0.001)
             metrics += [results[metric] for metric in trade_metrics]
         else:
-            results, strategy = run_backtest(df=df,
-                                             strategy_class=strategy_class,
-                                             initial_cash=100000,
-                                             commission=0.001)
+            results, strategy = run_backtest(
+                df=df[start_date:],  # b&h doesn't need extra warm up period
+                strategy_class=strategy_class,
+                initial_cash=100000,
+                commission=0.001)
             metrics += [results[metric] for metric in trade_metrics]
 
         # viz = False

@@ -59,13 +59,15 @@ class BacktestSingleShot(StockTradingEnv):
                 dim=1).float().numpy()  # convert logits to probabilities
             pred = np.argmax(probs, axis=1)
 
-        if should_sell(pred, buy_sell_signals_vals, price_below_ma):  # need to sell
+        if should_sell(pred, buy_sell_signals_vals,
+                       price_below_ma):  # need to sell
             if self.debug_mode:
                 print(
                     f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
                 )
             return Action.Sell
-        elif should_buy(pred, buy_sell_signals_vals, price_above_ma):  # good to buy
+        elif should_buy(pred, buy_sell_signals_vals,
+                        price_above_ma):  # good to buy
             if self.debug_mode:
                 print(
                     f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
