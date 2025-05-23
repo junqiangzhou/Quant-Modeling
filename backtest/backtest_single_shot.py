@@ -78,6 +78,7 @@ class BacktestSingleShot(StockTradingEnv):
 
     def run(self) -> None:
         done = False
+        print("current_date: ", self.start_date, " end_date: ", self.end_date)
         # print("current_date: ", self.start_date, " end_date: ", self.end_date)
         try:
             start_price, end_price = self.stock_data.loc[self.start_date][
@@ -103,6 +104,6 @@ if __name__ == "__main__":
     end_date = "2021-12-31"
     init_fund = 1.0e4
 
-    for stock in MAG7:
+    for stock in MAG7 + ["QQQ", "SPY"]:
         backtest = BacktestSingleShot(stock, start_date, end_date, init_fund)
         backtest.run()
