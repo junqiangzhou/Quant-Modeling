@@ -51,19 +51,12 @@ for i, stock in enumerate(stocks):
 
     last_date = df.index[-1]
     features = compute_online_feature(df, last_date)
-    if features is None or np.isnan(features).any() or np.isinf(
-            features).any():
-        print(f"Features are not valid for {stock}")
-    else:
-        features_tensor = torch.tensor(features, dtype=torch.float32)
+    probs = model.predict(features)
 
-    with torch.no_grad():
-        probs = model.predict(features_tensor)
-
-        probs_hold = probs[:, 0]
-        probs_buy = probs[:, 1]
-        probs_sell = probs[:, 2]
-        pred[i, :] = np.concatenate([probs_buy, probs_sell, probs_hold])
+    probs_hold = probs[:, 0]
+    probs_buy = probs[:, 1]
+    probs_sell = probs[:, 2]
+    pred[i, :] = np.concatenate([probs_buy, probs_sell, probs_hold])
 # Save results into a csv file
 df_pred = pd.DataFrame(pred, index=stocks, columns=columns)
 # Calculate the mean of buy/sell/hold signals using only the trend labels

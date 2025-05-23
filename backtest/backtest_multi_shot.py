@@ -2,13 +2,12 @@ from rl.multi_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, ActionProbability, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
-from strategy.rule_based import should_buy, should_sell, calc_pred_labels
+from strategy.rule_based import should_buy, should_sell
+from model.model import compute_model_output
 
-from numpy.typing import NDArray
 from typing import List, Tuple
 from datetime import datetime
 import numpy as np
-import torch
 
 
 class BacktestSingleShot(StockTradingEnv):
@@ -112,14 +111,6 @@ class BacktestSingleShot(StockTradingEnv):
     def compute_stocks_action(self, date: datetime) -> List[ActionProbability]:
         stock_action_data = []
         for stock in self.stocks:
-            features = compute_online_feature(self.stock_data[stock], date)
-            if features is None or np.isnan(features).any() or np.isinf(
-                    features).any():
-                action_prob = ActionProbability(action=Action.Hold, prob=0)
-                stock_action_data.append(action_prob)
-            else:
-                features_tensor = torch.tensor(features, dtype=torch.float32)
-
             buy_sell_signals_vals = self.stock_data[stock].loc[
                 date, buy_sell_signals].values
             price_above_ma = self.stock_data[stock].loc[
@@ -131,14 +122,18 @@ class BacktestSingleShot(StockTradingEnv):
                 pred = self.stock_data[stock].loc[date, label_names].values
                 probs_avg = np.ones(3)
             else:
-                with torch.no_grad():
-                    logits = self.prediction_model(features_tensor)
-                    logits = logits.reshape(len(label_names), 3)
-                    probs = torch.softmax(logits, dim=1).float().numpy(
-                    )  # convert logits to probabilities
-                    probs_avg = np.mean(probs, axis=0)
-                    pred = calc_pred_labels(probs)
+                features = compute_online_feature(self.stock_data[stock], date)
+                probs, pred, _ = compute_model_output(self.prediction_model,
+                                                      features)
+                # Early return if error
+                if probs is None or pred is None:
+                    print(f"stock {stock} feature has invalid data")
+                    action_prob = ActionProbability(action=Action.Hold, prob=0)
+                    stock_action_data.append(action_prob)
+                    continue
+                probs_avg = np.mean(probs, axis=0)
 
+            # Choose actions and report probability
             if should_buy(pred, buy_sell_signals_vals, price_above_ma):
                 action_prob = ActionProbability(action=Action.Buy,
                                                 prob=probs_avg[1])

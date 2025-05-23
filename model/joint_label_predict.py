@@ -1,8 +1,9 @@
 import torch
 import numpy as np
 import os
+from numpy.typing import NDArray
 
-from model.model import PredictionModel
+from model.model import PredictionModel, compute_model_output
 
 from config.config import (ENCODER_TYPE, label_names, feature_names,
                            look_back_window, MODEL_EXPORT_NAME, LabelType,
@@ -42,24 +43,16 @@ class JointLabelPredictor:
                 torch.load(f"./model/export/{price_model_name}.pth"))
             self.price_model.eval()
 
-    def predict(self, features):
+    def predict(self, features: NDArray) -> NDArray:
         # Predict trend and price labels
-        with torch.no_grad():
-            trend_logits = self.trend_model(features)
-            if self.price_model is not None:
-                price_logits = self.price_model(features)
-            else:
-                price_logits = torch.zeros_like(trend_logits)
+        trend_probs, _, _ = compute_model_output(self.trend_model, features)
+        if self.price_model is not None:
+            price_probs, _, _ = compute_model_output(self.price_model,
+                                                     features)
+        else:
+            price_probs = np.zeros_like(trend_probs)
 
-            trend_logits = trend_logits.reshape(len(label_names), 3)
-            price_logits = price_logits.reshape(len(label_names), 3)
-
-            trend_probs = torch.softmax(trend_logits,
-                                        dim=1).float().cpu().numpy()
-            price_probs = torch.softmax(price_logits,
-                                        dim=1).float().cpu().numpy()
-
-            # combine the two models' predictions
-            probs = np.concatenate((trend_probs, price_probs), axis=0)
+        # combine the two models' predictions
+        probs = np.concatenate((trend_probs, price_probs), axis=0)
 
         return probs

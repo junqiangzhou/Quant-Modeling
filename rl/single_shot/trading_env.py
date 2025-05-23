@@ -2,7 +2,7 @@ from data.data_fetcher import create_dataset
 from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
 from feature.label import compute_labels
-from model.model import PredictionModel
+from model.model import PredictionModel, compute_model_output
 from config.config import (ENCODER_TYPE, Action, feature_names,
                            look_back_window, label_names, MODEL_EXPORT_NAME)
 
@@ -92,19 +92,13 @@ class StockTradingEnv(gym.Env):
         row = self.stock_data.loc[self.current_step]
 
         features = compute_online_feature(self.stock_data, self.current_step)
-        if features is None:
+        probs, pred, _ = compute_model_output(self.prediction_model, features)
+        if probs is None or pred is None:
             raise ValueError("Error in computing features")
 
-        features_tensor = torch.tensor(features, dtype=torch.float32)
-        with torch.no_grad():
-            logits = self.prediction_model(features_tensor)
-            logits = logits.reshape(len(label_names), 3)
-            predicted_prob = torch.softmax(
-                logits,
-                dim=1).float().numpy()  # convert logits to probabilities
-
+        predicted_probs = probs[0, :]
         obs = np.concatenate(
-            ([row['Close'] / self.price_scale], predicted_prob[0, :],
+            ([row['Close'] / self.price_scale], predicted_probs,
              [self.stock_holdings,
               self.balance / self.init_balance])).astype(np.float32)
 

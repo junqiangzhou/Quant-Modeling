@@ -1,5 +1,6 @@
 from model.utils import PositionalEncoding, AttentionPooling
 from config.config import EncoderType, device, label_names
+from strategy.rule_based import calc_pred_labels
 
 import torch
 import torch.nn as nn
@@ -7,6 +8,7 @@ import torch.nn.functional as F
 import xgboost as xgb
 import numpy as np
 from sklearn.model_selection import GridSearchCV
+from numpy.typing import NDArray
 
 MLP_ENCODER_HIDDEN_DIM = 128
 MULTI_TASK_DECODER_HIDDEN_DIM = 256
@@ -387,6 +389,24 @@ class XGBoostClassifier:
                 y_preds = np.column_stack((y_preds, y_pred_class))
                 y_probs = np.column_stack((y_probs, y_pred_prob))
         return y_preds, y_preds
+
+
+def compute_model_output(model: PredictionModel, features: NDArray):
+    if features is None or np.isnan(features).any() or np.isinf(
+            features).any():
+        # print(f"NaN or INF detected in {stock} on {date}")
+        return None, None, None
+
+    features_tensor = torch.tensor(features, dtype=torch.float32)
+
+    with torch.no_grad():
+        logits = model(features_tensor)
+        logits = logits.reshape(len(label_names), 3)
+        probs = torch.softmax(
+            logits, dim=1).float().numpy()  # convert logits to probabilities
+        pred = calc_pred_labels(probs)
+
+    return probs, pred, logits
 
 
 if __name__ == "__main__":

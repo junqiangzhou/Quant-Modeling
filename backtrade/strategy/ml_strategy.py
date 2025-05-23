@@ -1,6 +1,6 @@
 import backtrader as bt
 
-from model.model import PredictionModel
+from model.model import PredictionModel, compute_model_output
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, feature_names,
                            look_back_window, Action, label_names,
                            buy_sell_signals)
@@ -258,23 +258,13 @@ class MLStrategy(bt.Strategy):
                 [getattr(self.data, col)[0] for col in label_names])
         else:
             features = self.compute_features()
-            if features is None or np.isnan(features).any() or np.isinf(
-                    features).any():
+            probs, pred, _ = compute_model_output(self.model, features)
+            if probs is None or pred is None:
                 if self.debug_mode:
                     self.log(
                         f"NaN or INF detected on {self.data.datetime.datetime(0)}"
                     )
                 return Action.Hold
-            else:
-                features_tensor = torch.tensor(features, dtype=torch.float32)
-
-            with torch.no_grad():
-                logits = self.model(features_tensor)
-                logits = logits.reshape(len(label_names), 3)
-                probs = torch.softmax(
-                    logits,
-                    dim=1).float().numpy()  # convert logits to probabilities
-                pred = calc_pred_labels(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
