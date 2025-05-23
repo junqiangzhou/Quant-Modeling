@@ -1,6 +1,7 @@
 import torch
 from enum import Enum
 from itertools import chain
+from dataclasses import dataclass
 
 # device config
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -44,6 +45,16 @@ class Action(Enum):
     Hold = 0
     Buy = 1
     Sell = 2
+
+
+@dataclass
+class ActionProbability:
+    action: Action
+    prob: float
+
+    def __post_init__(self):
+        if not (0.0 <= self.prob <= 1.0):
+            raise ValueError("Probability must be between 0 and 1.")
 
 
 # random seed across code base for reproducibility

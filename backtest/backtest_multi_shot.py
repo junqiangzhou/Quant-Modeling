@@ -1,11 +1,12 @@
 from rl.multi_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
-from config.config import Action, label_names, buy_sell_signals
+from config.config import Action, ActionProbability, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
 from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 from numpy.typing import NDArray
 from typing import List, Tuple
+from datetime import datetime
 import numpy as np
 import torch
 
@@ -21,6 +22,9 @@ class BacktestSingleShot(StockTradingEnv):
         self.debug_mode = False
         self.earning_day_sell = False
         self.active_sell = False
+        self.use_gt_label = False
+        if self.use_gt_label:
+            print("+++++++++++++Using GT labels for backtest++++++++++++++")
 
     def compute_action(self) -> Tuple[int, Action]:
         date = self.current_step
@@ -48,7 +52,7 @@ class BacktestSingleShot(StockTradingEnv):
         stock_actions = self.compute_stocks_action(date)
         if self.stock_holdings > 0:
             # Need to sell based on current predictions
-            if stock_actions[self.stock_held][0] == 2:
+            if stock_actions[self.stock_held].action == Action.Sell:
                 if self.debug_mode:
                     price = self.stock_data[self.stocks[
                         self.stock_held]].loc[date]["Close"]
@@ -60,13 +64,13 @@ class BacktestSingleShot(StockTradingEnv):
             if self.active_sell:
                 # Choose to sell since other stocks have better buy signals
                 for i, stock in enumerate(self.stocks):
-                    if stock_actions[i][0] == 1 and stock_actions[i][
-                            1] > 0.6 and stock_actions[i][1] > stock_actions[
-                                self.stock_held][1]:
+                    if stock_actions[i].action == Action.Buy and stock_actions[
+                            i].prob > 0.6 and stock_actions[
+                                i].prob > stock_actions[self.stock_held].prob:
                         if self.debug_mode:
                             price = self.stock_data[stock].loc[date]["Close"]
                             print(
-                                f"------Choose to sell with buy better stocks {date}, stock {stock}, close price {price:.2f}, prob. of trending up {stock_actions[i][1]}"
+                                f"------Choose to sell with buy better stocks {date}, stock {stock}, close price {price:.2f}, prob. of trending up {stock_actions[i].prob}"
                             )
                         return (self.stock_held, Action.Sell)
 
@@ -74,8 +78,9 @@ class BacktestSingleShot(StockTradingEnv):
             # Find the stock with highest probability of trending up
             max_probs, max_stock = 0.0, None
             for i, stock in enumerate(self.stocks):
-                if stock_actions[i][0] == 1 and stock_actions[i][1] > max_probs:
-                    max_probs = stock_actions[i][1]
+                if stock_actions[i].action == Action.Buy and stock_actions[
+                        i].prob > max_probs:
+                    max_probs = stock_actions[i].prob
                     max_stock = i
 
             if max_stock is not None:
@@ -104,23 +109,16 @@ class BacktestSingleShot(StockTradingEnv):
 
         return
 
-    def compute_stocks_action(self, date):
+    def compute_stocks_action(self, date: datetime) -> List[ActionProbability]:
         stock_action_data = []
         for stock in self.stocks:
             features = compute_online_feature(self.stock_data[stock], date)
             if features is None or np.isnan(features).any() or np.isinf(
                     features).any():
-                stock_action_data.append(np.array([0, 0]))
+                action_prob = ActionProbability(action=Action.Hold, prob=0)
+                stock_action_data.append(action_prob)
             else:
                 features_tensor = torch.tensor(features, dtype=torch.float32)
-
-            with torch.no_grad():
-                logits = self.prediction_model(features_tensor)
-                logits = logits.reshape(len(label_names), 3)
-                probs = torch.softmax(
-                    logits,
-                    dim=1).float().numpy()  # convert logits to probabilities
-                pred = calc_pred_labels(probs)
 
             buy_sell_signals_vals = self.stock_data[stock].loc[
                 date, buy_sell_signals].values
@@ -129,18 +127,30 @@ class BacktestSingleShot(StockTradingEnv):
             price_below_ma = self.stock_data[stock].loc[
                 date, "Price_Below_MA_5"] == 1
 
-            need_buy = should_buy(pred, buy_sell_signals_vals, price_above_ma)
-            need_sell = should_sell(pred, buy_sell_signals_vals,
-                                    price_below_ma)
-            probs_avg = np.mean(probs, axis=0)
-
-            if need_buy:
-                stock_action_data.append(np.array([1, probs_avg[1]]))
-            elif need_sell:
-                stock_action_data.append(np.array([2, probs_avg[2]]))
+            if self.use_gt_label:
+                pred = self.stock_data[stock].loc[date, label_names].values
+                probs_avg = np.ones(3)
             else:
-                stock_action_data.append(np.array([0, probs_avg[0]]))
-        stock_action_data = np.vstack(stock_action_data)
+                with torch.no_grad():
+                    logits = self.prediction_model(features_tensor)
+                    logits = logits.reshape(len(label_names), 3)
+                    probs = torch.softmax(logits, dim=1).float().numpy(
+                    )  # convert logits to probabilities
+                    probs_avg = np.mean(probs, axis=0)
+                    pred = calc_pred_labels(probs)
+
+            if should_buy(pred, buy_sell_signals_vals, price_above_ma):
+                action_prob = ActionProbability(action=Action.Buy,
+                                                prob=probs_avg[1])
+                stock_action_data.append(action_prob)
+            elif should_sell(pred, buy_sell_signals_vals, price_below_ma):
+                action_prob = ActionProbability(action=Action.Sell,
+                                                prob=probs_avg[2])
+                stock_action_data.append(action_prob)
+            else:
+                action_prob = ActionProbability(action=Action.Hold,
+                                                prob=probs_avg[0])
+                stock_action_data.append(action_prob)
         return stock_action_data
 
 
