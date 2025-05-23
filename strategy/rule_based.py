@@ -40,5 +40,12 @@ def calc_pred_labels(probs: NDArray) -> NDArray:
     """
     Convert probabilities to labels.
     """
-    pred = np.argmax(probs, axis=1)
+    # pred = np.argmax(probs, axis=1)
+    rows, _ = probs.shape
+    pred = np.zeros(rows)
+    for i in range(rows):
+        if probs[i, 1] > 0.6:
+            pred[i] = 1
+        elif probs[i, 2] > 0.5:
+            pred[i] = 2
     return pred
