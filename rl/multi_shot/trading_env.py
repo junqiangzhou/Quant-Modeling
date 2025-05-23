@@ -10,7 +10,6 @@ import numpy as np
 import torch
 import pandas as pd
 from datetime import datetime, timedelta
-import bisect
 from typing import List
 from gymnasium import spaces
 
@@ -57,8 +56,9 @@ class StockTradingEnv(gym.Env):
 
         self.index = df.index
         start_date = normalize_date(start_date)
-        start_index = bisect.bisect_left(self.index, start_date)
-        self.start_date = self.index[start_index]
+        while start_date not in self.index:
+            start_date += timedelta(days=1)
+        self.start_date = start_date
         self.end_date = self.index[-1]
         self.current_step = self.start_date
 

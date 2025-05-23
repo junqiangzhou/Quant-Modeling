@@ -1,6 +1,7 @@
 from data.data_fetcher import create_dataset
 from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
+from feature.label import compute_labels
 from model.model import PredictionModel
 from config.config import (ENCODER_TYPE, Action, feature_names,
                            look_back_window, label_names, MODEL_EXPORT_NAME)
@@ -10,7 +11,6 @@ import numpy as np
 import torch
 import pandas as pd
 from datetime import datetime, timedelta
-import bisect
 from gymnasium import spaces
 
 
@@ -27,7 +27,9 @@ class StockTradingEnv(gym.Env):
         #     f"Stocks: {stock}, start date: {start_date}, end date: {end_date}")
         # Load stock data
         shifted_start_date = get_date_back(start_date, look_back_window + 30)
-        self.stock_data = create_dataset(stock, shifted_start_date, end_date)
+        df = create_dataset(stock, shifted_start_date, end_date)
+        df, _ = compute_labels(df)
+        self.stock_data = df
 
         # Load prediction model
         self.prediction_model = PredictionModel(feature_len=len(feature_names),
@@ -44,8 +46,9 @@ class StockTradingEnv(gym.Env):
         self.portfolio = init_fund
 
         start_date = normalize_date(start_date)
-        start_index = bisect.bisect_left(self.stock_data.index, start_date)
-        self.start_date = self.stock_data.index[start_index]
+        while start_date not in self.stock_data.index:
+            start_date += timedelta(days=1)
+        self.start_date = start_date
         self.end_date = self.stock_data.index[-1]
         self.current_step = self.start_date
         self.price_scale = self.stock_data.loc[self.start_date][
@@ -138,5 +141,5 @@ class StockTradingEnv(gym.Env):
     def render(self, mode='human'):
         """Render the current state (for debugging)."""
         print(
-            f'Step: {self.current_step}, Balance: {self.balance:.2f}, Holdings: {self.stock_holdings:.1f}, Portfolio: {self.portfolio:.2f}'
+            f'Step: {self.current_step}, Balance: {self.balance:.2f}, Holdings: {self.stock_holdings:.1f}, Portfolio: {self.portfolio:.2f},'
         )
