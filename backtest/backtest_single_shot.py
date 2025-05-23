@@ -19,6 +19,9 @@ class BacktestSingleShot(StockTradingEnv):
         super().__init__(stock, start_date, end_date, init_fund)
         print(f">>>>>{stock}:")
         self.debug_mode = False
+        self.use_gt_label = True
+        if self.use_gt_label:
+            print("+++++++++++++Using GT labels for backtest++++++++++++++")
 
     def compute_action(self) -> Action:
         date = self.current_step
@@ -51,13 +54,16 @@ class BacktestSingleShot(StockTradingEnv):
         price_above_ma = self.stock_data.loc[date, "Price_Above_MA_5"] == 1
         price_below_ma = self.stock_data.loc[date, "Price_Below_MA_5"] == 1
 
-        with torch.no_grad():
-            logits = self.prediction_model(features_tensor)
-            logits = logits.reshape(len(label_names), 3)
-            probs = torch.softmax(
-                logits,
-                dim=1).float().numpy()  # convert logits to probabilities
-            pred = np.argmax(probs, axis=1)
+        if self.use_gt_label:
+            pred = self.stock_data.loc[date, label_names].values
+        else:
+            with torch.no_grad():
+                logits = self.prediction_model(features_tensor)
+                logits = logits.reshape(len(label_names), 3)
+                probs = torch.softmax(
+                    logits,
+                    dim=1).float().numpy()  # convert logits to probabilities
+                pred = np.argmax(probs, axis=1)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
