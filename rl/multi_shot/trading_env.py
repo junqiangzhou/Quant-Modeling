@@ -1,6 +1,7 @@
 from data.data_fetcher import create_dataset
 from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
+from feature.label import compute_labels
 from model.model import PredictionModel
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
                            feature_names, look_back_window, label_names)
@@ -32,6 +33,7 @@ class StockTradingEnv(gym.Env):
         for stock in stocks:
             try:
                 df = create_dataset(stock, shifted_start_date, end_date)
+                df, _ = compute_labels(df)
                 self.stock_data[stock] = df
             except:
                 print(f" Error in processing {stock}")
