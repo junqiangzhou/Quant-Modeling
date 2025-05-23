@@ -8,6 +8,7 @@ from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, device,
                            look_back_window, label_names, buy_sell_signals,
                            feature_names)
 from data.stocks_fetcher import MAG7, PICKS
+from strategy.rule_based import calc_pred_labels
 
 import torch
 import pandas as pd
@@ -64,9 +65,8 @@ def eval_model(model, criterion, test_dataset):
                 logit,
                 dim=1).float().cpu().numpy()  # convert logits to probabilities
 
-            pred = np.argmax(
-                prob,
-                axis=1)  # predicted label based from max prob for each row
+            pred = calc_pred_labels(
+                prob)  # predicted label based from max prob for each row
             # pred = np.zeros(prob.shape[0])
             # for i in range(prob.shape[0]):
             #     if prob[i, 1] > 0.5:

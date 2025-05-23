@@ -34,3 +34,11 @@ def should_sell(pred: NDArray, buy_sell_signals_vals: NDArray,
         return True
 
     return False
+
+
+def calc_pred_labels(probs: NDArray) -> NDArray:
+    """
+    Convert probabilities to labels.
+    """
+    pred = np.argmax(probs, axis=1)
+    return pred

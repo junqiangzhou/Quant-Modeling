@@ -2,7 +2,7 @@ from rl.single_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 from numpy.typing import NDArray
 import numpy as np
@@ -63,7 +63,7 @@ class BacktestSingleShot(StockTradingEnv):
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
-                pred = np.argmax(probs, axis=1)
+                pred = calc_pred_labels(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
@@ -84,6 +84,7 @@ class BacktestSingleShot(StockTradingEnv):
 
     def run(self) -> None:
         done = False
+        print("current_date: ", self.start_date, " end_date: ", self.end_date)
         # print("current_date: ", self.start_date, " end_date: ", self.end_date)
         try:
             start_price, end_price = self.stock_data.loc[self.start_date][
@@ -109,6 +110,6 @@ if __name__ == "__main__":
     end_date = "2021-12-31"
     init_fund = 1.0e4
 
-    for stock in MAG7:
+    for stock in MAG7 + ["QQQ", "SPY"]:
         backtest = BacktestSingleShot(stock, start_date, end_date, init_fund)
         backtest.run()

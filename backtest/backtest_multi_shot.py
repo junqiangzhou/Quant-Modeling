@@ -2,7 +2,7 @@ from rl.multi_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 from numpy.typing import NDArray
 from typing import List, Tuple
@@ -19,6 +19,8 @@ class BacktestSingleShot(StockTradingEnv):
                  init_fund: float = 1.0e4):
         super().__init__(stocks, start_date, end_date, init_fund)
         self.debug_mode = False
+        self.earning_day_sell = False
+        self.active_sell = False
 
     def compute_action(self) -> Tuple[int, Action]:
         date = self.current_step
@@ -26,9 +28,10 @@ class BacktestSingleShot(StockTradingEnv):
         # Check if needed to sell current holdings
         if self.stock_holdings > 0:
             stock = self.stocks[self.stock_held]
-            # Must sell all shares before earnings day
-            if date in self.stock_data[stock].index and self.stock_data[
-                    stock].loc[date]["Earnings_Date"]:
+            if self.earning_day_sell and date in self.stock_data[
+                    stock].index and self.stock_data[stock].loc[date][
+                        "Earnings_Date"]:
+                # Must sell all shares before earnings day
                 if self.debug_mode:
                     print(f"Earnings day must sell, {date}")
                 return (self.stock_held, Action.Sell)
@@ -42,74 +45,48 @@ class BacktestSingleShot(StockTradingEnv):
                         print(f"Must cut loss and sell, {date}")
                     return (self.stock_held, Action.Sell)
 
-            # Check sell probability/signal
-            features = compute_online_feature(self.stock_data[stock], date)
-            if features is None or np.isnan(features).any() or np.isinf(
-                    features).any():
-                # print(f"NaN or INF detected in {stock} on {date}")
-                return (self.stock_held, Action.Hold)
-            else:
-                features_tensor = torch.tensor(features, dtype=torch.float32)
-
-            buy_sell_signals_vals = self.stock_data[stock].loc[
-                date, buy_sell_signals].values
-            price_below_ma = self.stock_data[stock].loc[
-                date, "Price_Below_MA_5"] == 1
-
-            with torch.no_grad():
-                logits = self.prediction_model(features_tensor)
-                logits = logits.reshape(len(label_names), 3)
-                probs = torch.softmax(
-                    logits,
-                    dim=1).float().numpy()  # convert logits to probabilities
-                pred = np.argmax(probs, axis=1)
-
-            if should_sell(pred, buy_sell_signals_vals,
-                           price_below_ma):  # need to sell
+        stock_actions = self.compute_stocks_action(date)
+        if self.stock_holdings > 0:
+            # Need to sell based on current predictions
+            if stock_actions[self.stock_held][0] == 2:
                 if self.debug_mode:
+                    price = self.stock_data[self.stocks[
+                        self.stock_held]].loc[date]["Close"]
                     print(
-                        f"------Predicted to sell, {date}, close price {price:.2f}, prob. of trending down {probs[:, 2]}"
+                        f"------Predicted to sell, {date}, close price {price:.2f}"
                     )
                 return (self.stock_held, Action.Sell)
 
-        else:  # Currently holds no stocks, and check if needed to buy
+            if self.active_sell:
+                # Choose to sell since other stocks have better buy signals
+                for i, stock in enumerate(self.stocks):
+                    if stock_actions[i][0] == 1 and stock_actions[i][
+                            1] > 0.6 and stock_actions[i][1] > stock_actions[
+                                self.stock_held][1]:
+                        if self.debug_mode:
+                            price = self.stock_data[stock].loc[date]["Close"]
+                            print(
+                                f"------Choose to sell with buy better stocks {date}, stock {stock}, close price {price:.2f}, prob. of trending up {stock_actions[i][1]}"
+                            )
+                        return (self.stock_held, Action.Sell)
+
+        else:  # Currently holds no stocks, and check if needs to buy
             # Find the stock with highest probability of trending up
-            max_probs = None
-            max_5day_buy_prob = 0
-            max_stock = None
-            for stock in self.stocks:
-                features = compute_online_feature(self.stock_data[stock], date)
-                if features is None or np.isnan(features).any() or np.isinf(
-                        features).any():
-                    # print(f"NaN or INF detected in {stock} on {date}")
-                    return (self.stock_held, Action.Hold)
-                else:
-                    features_tensor = torch.tensor(features,
-                                                   dtype=torch.float32)
+            max_probs, max_stock = 0.0, None
+            for i, stock in enumerate(self.stocks):
+                if stock_actions[i][0] == 1 and stock_actions[i][1] > max_probs:
+                    max_probs = stock_actions[i][1]
+                    max_stock = i
 
-                with torch.no_grad():
-                    logits = self.prediction_model(features_tensor)
-                    logits = logits.reshape(len(label_names), 3)
-                    probs = torch.softmax(logits, dim=1).float().numpy(
-                    )  # convert logits to probabilities
-                    if probs[0, 1] > max_5day_buy_prob:
-                        max_5day_buy_prob = probs[0, 1]
-                        max_probs = probs
-                        max_stock = stock
-                        pred = np.argmax(max_probs, axis=1)
-
-            buy_sell_signals_vals = self.stock_data[max_stock].loc[
-                date, buy_sell_signals].values
-            price_above_ma = self.stock_data[max_stock].loc[
-                date, "Price_Above_MA_5"] == 1
-
-            if should_buy(pred, buy_sell_signals_vals,
-                          price_above_ma):  # good to buy
+            if max_stock is not None:
                 if self.debug_mode:
+                    stock = self.stocks[max_stock]
+                    price = self.stock_data[
+                        self.stocks[max_stock]].loc[date]["Close"]
                     print(
-                        f"++++++Predicted to buy, {date}, close price {price:.2f}, prob. of trending up {probs[:, 1]}"
+                        f"++++++Predicted to buy, {date}, stock {stock}, close price {price:.2f}, prob. of trending up {max_probs}"
                     )
-                return (self.stocks.index(max_stock), Action.Buy)
+                return (max_stock, Action.Buy)
 
         return (self.stock_held, Action.Hold)
 
@@ -126,6 +103,45 @@ class BacktestSingleShot(StockTradingEnv):
         print(f"Quant profit: {reward * 100: .2f} %")
 
         return
+
+    def compute_stocks_action(self, date):
+        stock_action_data = []
+        for stock in self.stocks:
+            features = compute_online_feature(self.stock_data[stock], date)
+            if features is None or np.isnan(features).any() or np.isinf(
+                    features).any():
+                stock_action_data.append(np.array([0, 0]))
+            else:
+                features_tensor = torch.tensor(features, dtype=torch.float32)
+
+            with torch.no_grad():
+                logits = self.prediction_model(features_tensor)
+                logits = logits.reshape(len(label_names), 3)
+                probs = torch.softmax(
+                    logits,
+                    dim=1).float().numpy()  # convert logits to probabilities
+                pred = calc_pred_labels(probs)
+
+            buy_sell_signals_vals = self.stock_data[stock].loc[
+                date, buy_sell_signals].values
+            price_above_ma = self.stock_data[stock].loc[
+                date, "Price_Above_MA_5"] == 1
+            price_below_ma = self.stock_data[stock].loc[
+                date, "Price_Below_MA_5"] == 1
+
+            need_buy = should_buy(pred, buy_sell_signals_vals, price_above_ma)
+            need_sell = should_sell(pred, buy_sell_signals_vals,
+                                    price_below_ma)
+            probs_avg = np.mean(probs, axis=0)
+
+            if need_buy:
+                stock_action_data.append(np.array([1, probs_avg[1]]))
+            elif need_sell:
+                stock_action_data.append(np.array([2, probs_avg[2]]))
+            else:
+                stock_action_data.append(np.array([0, probs_avg[0]]))
+        stock_action_data = np.vstack(stock_action_data)
+        return stock_action_data
 
 
 if __name__ == "__main__":
