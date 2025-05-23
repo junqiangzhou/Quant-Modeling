@@ -123,7 +123,8 @@ class BacktestSingleShot(StockTradingEnv):
                 probs_avg = np.ones(3)
             else:
                 features = compute_online_feature(self.stock_data[stock], date)
-                probs, pred = compute_model_output(self.prediction_model, features)
+                probs, pred, _ = compute_model_output(self.prediction_model,
+                                                      features)
                 # Early return if error
                 if probs is None or pred is None:
                     print(f"stock {stock} feature has invalid data")

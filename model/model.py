@@ -395,7 +395,7 @@ def compute_model_output(model: PredictionModel, features: NDArray):
     if features is None or np.isnan(features).any() or np.isinf(
             features).any():
         # print(f"NaN or INF detected in {stock} on {date}")
-        return None, None
+        return None, None, None
 
     features_tensor = torch.tensor(features, dtype=torch.float32)
 
@@ -403,11 +403,11 @@ def compute_model_output(model: PredictionModel, features: NDArray):
         logits = model(features_tensor)
         logits = logits.reshape(len(label_names), 3)
         probs = torch.softmax(
-            logits,
-            dim=1).float().numpy()  # convert logits to probabilities
+            logits, dim=1).float().numpy()  # convert logits to probabilities
         pred = calc_pred_labels(probs)
 
-    return probs, pred
+    return probs, pred, logits
+
 
 if __name__ == "__main__":
     # Example usage

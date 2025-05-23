@@ -52,7 +52,8 @@ class BacktestSingleShot(StockTradingEnv):
             pred = self.stock_data.loc[date, label_names].values
         else:
             features = compute_online_feature(self.stock_data, date)
-            probs, pred = compute_model_output(self.prediction_model, features)
+            probs, pred, _ = compute_model_output(self.prediction_model,
+                                                  features)
             if probs is None or pred is None:
                 return Action.Hold
 
