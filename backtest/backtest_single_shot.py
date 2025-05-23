@@ -2,7 +2,7 @@ from rl.single_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 from numpy.typing import NDArray
 import numpy as np
@@ -57,7 +57,7 @@ class BacktestSingleShot(StockTradingEnv):
             probs = torch.softmax(
                 logits,
                 dim=1).float().numpy()  # convert logits to probabilities
-            pred = np.argmax(probs, axis=1)
+            pred = calc_pred_labels(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell

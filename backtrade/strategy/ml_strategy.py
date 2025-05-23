@@ -5,7 +5,7 @@ from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, feature_names,
                            look_back_window, Action, label_names,
                            buy_sell_signals)
 from feature.feature import compute_online_feature, normalize_features
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 import torch
 from datetime import datetime
@@ -274,7 +274,7 @@ class MLStrategy(bt.Strategy):
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
-                pred = np.argmax(probs, axis=1)
+                pred = calc_pred_label(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell

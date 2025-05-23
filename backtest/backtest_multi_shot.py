@@ -2,7 +2,7 @@ from rl.multi_shot.trading_env import StockTradingEnv
 from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 
 from numpy.typing import NDArray
 from typing import List, Tuple
@@ -28,8 +28,9 @@ class BacktestSingleShot(StockTradingEnv):
         # Check if needed to sell current holdings
         if self.stock_holdings > 0:
             stock = self.stocks[self.stock_held]
-            if self.earning_day_sell and date in self.stock_data[stock].index and self.stock_data[
-                        stock].loc[date]["Earnings_Date"]:
+            if self.earning_day_sell and date in self.stock_data[
+                    stock].index and self.stock_data[stock].loc[date][
+                        "Earnings_Date"]:
                 # Must sell all shares before earnings day
                 if self.debug_mode:
                     print(f"Earnings day must sell, {date}")
@@ -119,7 +120,7 @@ class BacktestSingleShot(StockTradingEnv):
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
-                pred = np.argmax(probs, axis=1)
+                pred = calc_pred_labels(probs)
 
             buy_sell_signals_vals = self.stock_data[stock].loc[
                 date, buy_sell_signals].values

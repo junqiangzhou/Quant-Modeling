@@ -3,7 +3,7 @@ from data.utils import get_date_back, normalize_date
 from feature.feature import compute_online_feature
 from feature.label import compute_labels
 from model.model import PredictionModel
-from strategy.rule_based import should_buy, should_sell
+from strategy.rule_based import should_buy, should_sell, calc_pred_labels
 from data.stocks_fetcher import MAG7
 from config.config import (MODEL_EXPORT_NAME, ENCODER_TYPE, Action,
                            random_seed, label_names, buy_sell_signals,
@@ -111,7 +111,7 @@ class BacktestSystem:
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
-                pred = np.argmax(probs, axis=1)
+                pred = calc_pred_labels(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
