@@ -3,6 +3,7 @@ from feature.feature import compute_online_feature
 from config.config import Action, label_names, buy_sell_signals
 from data.stocks_fetcher import MAG7
 from strategy.rule_based import should_buy, should_sell, calc_pred_labels
+from model.model import compute_model_output
 
 from numpy.typing import NDArray
 import numpy as np
@@ -19,7 +20,7 @@ class BacktestSingleShot(StockTradingEnv):
         super().__init__(stock, start_date, end_date, init_fund)
         print(f">>>>>{stock}:")
         self.debug_mode = False
-        self.use_gt_label = True
+        self.use_gt_label = False
         if self.use_gt_label:
             print("+++++++++++++Using GT labels for backtest++++++++++++++")
 
@@ -41,14 +42,7 @@ class BacktestSingleShot(StockTradingEnv):
                     print(f"Must cut loss and sell, {date}")
                 return Action.Sell
 
-        features = compute_online_feature(self.stock_data, date)
-        if features is None or np.isnan(features).any() or np.isinf(
-                features).any():
-            # print(f"NaN or INF detected in {stock} on {date}")
-            return Action.Hold
-        else:
-            features_tensor = torch.tensor(features, dtype=torch.float32)
-
+        # Call the model
         buy_sell_signals_vals = self.stock_data.loc[date,
                                                     buy_sell_signals].values
         price_above_ma = self.stock_data.loc[date, "Price_Above_MA_5"] == 1
@@ -57,13 +51,10 @@ class BacktestSingleShot(StockTradingEnv):
         if self.use_gt_label:
             pred = self.stock_data.loc[date, label_names].values
         else:
-            with torch.no_grad():
-                logits = self.prediction_model(features_tensor)
-                logits = logits.reshape(len(label_names), 3)
-                probs = torch.softmax(
-                    logits,
-                    dim=1).float().numpy()  # convert logits to probabilities
-                pred = calc_pred_labels(probs)
+            features = compute_online_feature(self.stock_data, date)
+            probs, pred = compute_model_output(self.prediction_model, features)
+            if probs is None or pred is None:
+                return Action.Hold
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
