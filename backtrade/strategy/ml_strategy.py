@@ -274,7 +274,7 @@ class MLStrategy(bt.Strategy):
                 probs = torch.softmax(
                     logits,
                     dim=1).float().numpy()  # convert logits to probabilities
-                pred = calc_pred_label(probs)
+                pred = calc_pred_labels(probs)
 
         if should_sell(pred, buy_sell_signals_vals,
                        price_below_ma):  # need to sell
