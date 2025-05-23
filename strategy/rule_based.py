@@ -44,8 +44,8 @@ def calc_pred_labels(probs: NDArray) -> NDArray:
     rows, _ = probs.shape
     pred = np.zeros(rows)
     for i in range(rows):
-        if probs[i, 1] > 0.6:
+        if probs[i, 1] == max(probs[i, :]):
             pred[i] = 1
-        elif probs[i, 2] > 0.5:
+        elif probs[i, 2] == max(probs[i, :]):
             pred[i] = 2
     return pred
