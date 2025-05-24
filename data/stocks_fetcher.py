@@ -3,11 +3,12 @@ from yahoo_fin import stock_info as si
 import random
 
 MAG7 = ["TSLA", "AAPL", "GOOG", "AMZN", "MSFT", "META", "NVDA"]
-ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK"]
+ETF = ["SPY", "QQQ", "DIA", "IWM", "XLK", "GOLD", "DXYZ"]
 BOND = ["TLT", "IEF", "SHY", "LQD", "HYG"]
 PICKS = [
     "NU", "HIMS", "RBLX", "UPST", "SE", "CRWD", "DDOG", "SNOW", "PLTR", "HCA",
-    "TTWO", "RDDT", "DOCU", "PINS", "MRVL", "DASH", "NET", "PANW", "ANET"
+    "RDDT", "DOCU", "PINS", "MRVL", "DASH", "NET", "PANW", "ANET", "TEM",
+    "ALAB", "OKLO", "APP", "MSTR", "COIN"
 ]
 CHINA = [
     "BABA", "TCEHY", "JD", "BIDU", "PDD", "BILI", "DOYU", "HUYA", "NTES",
